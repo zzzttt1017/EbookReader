@@ -1,6 +1,6 @@
 import { defineComponent, h, ref } from 'vue'
-import { EBookReaderVue } from '@ebook-demo/ebook-reader/vue'
-import '@ebook-demo/ebook-reader/style.css'
+import { EBookReaderVue } from '@somecat/ebook-reader/vue'
+import '@somecat/ebook-reader/style.css'
 import './app.css'
 
 export default defineComponent({

@@ -36,7 +36,7 @@ importers:
 
   playgrounds/react-demo:
     dependencies:
-      '@ebook-demo/ebook-reader':
+      '@somecat/ebook-reader':
         specifier: workspace:*
         version: link:../..
       react:
@@ -58,7 +58,7 @@ importers:
 
   playgrounds/vue-demo:
     dependencies:
-      '@ebook-demo/ebook-reader':
+      '@somecat/ebook-reader':
         specifier: workspace:*
         version: link:../..
       vue:

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { EBookReader } from '@ebook-demo/ebook-reader/react'
-import '@ebook-demo/ebook-reader/style.css'
+import { EBookReader } from '@somecat/ebook-reader/react'
+import '@somecat/ebook-reader/style.css'
 import './app.css'
 
 export default function App() {

@@ -1,25 +1,25 @@
-# @ebook-demo/ebook-reader
+# @somecat/ebook-reader
 
 轻量 EBookReader：基于 `foliate-js` 的 `foliate-view`，提供 React 18+ / Vue 3 组件（不依赖 Ant Design / UnoCSS），并内置基础 UI（目录、搜索、翻页、字号、明暗主题、阅读进度）。
 
 ## 安装
 
 ```bash
-pnpm add @ebook-demo/ebook-reader
+pnpm add @somecat/ebook-reader
 ```
 
 同时在你的应用入口引入样式：
 
 ```ts
-import '@ebook-demo/ebook-reader/style.css'
+import '@somecat/ebook-reader/style.css'
 ```
 
 ## React 18+
 
 ```tsx
 import { useMemo, useState } from 'react'
-import { EBookReader } from '@ebook-demo/ebook-reader/react'
-import '@ebook-demo/ebook-reader/style.css'
+import { EBookReader } from '@somecat/ebook-reader/react'
+import '@somecat/ebook-reader/style.css'
 
 export default function Demo() {
   const [file, setFile] = useState<File | null>(null)
@@ -42,12 +42,12 @@ export default function Demo() {
 ## Vue 3
 
 ```ts
-import '@ebook-demo/ebook-reader/style.css'
+import '@somecat/ebook-reader/style.css'
 ```
 
 ```ts
 import { defineComponent, ref } from 'vue'
-import { EBookReaderVue } from '@ebook-demo/ebook-reader/vue'
+import { EBookReaderVue } from '@somecat/ebook-reader/vue'
 
 export default defineComponent({
   setup() {

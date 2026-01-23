@@ -1,5 +1,5 @@
 {
-  "name": "@ebook-demo/ebook-reader-react-demo",
+  "name": "@somecat/ebook-reader-react-demo",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ebook-demo/ebook-reader": "workspace:*",
+    "@somecat/ebook-reader": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
