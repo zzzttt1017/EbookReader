@@ -1,0 +1,20 @@
+{
+  "name": "@ebook-demo/ebook-reader-react-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -C ../.. build && vite",
+    "build": "pnpm -C ../.. build && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ebook-demo/ebook-reader": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.9.2",
+    "vite": "^6.0.0"
+  }
+}

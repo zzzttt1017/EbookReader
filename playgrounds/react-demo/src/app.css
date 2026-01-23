@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.app__file {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.app__main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
