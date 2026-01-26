@@ -67,7 +67,7 @@ const updateSearchOption = (key: keyof SearchOptions, value: boolean) => {
   <div>
     <div :class="['ebook-reader__mbar', { 'is-visible': barVisible }]">
       <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'menu'" @click="emit('togglePanel', 'menu')">
-        菜单
+        目录
       </button>
       <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'search'" @click="emit('togglePanel', 'search')">
         搜索

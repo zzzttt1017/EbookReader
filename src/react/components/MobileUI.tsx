@@ -73,7 +73,7 @@ export const MobileUI = ({
     <>
       <div className={`ebook-reader__mbar ${barVisible ? 'is-visible' : ''}`}>
         <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('menu')} aria-pressed={activePanel === 'menu'}>
-          菜单
+          目录
         </button>
         <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('search')} aria-pressed={activePanel === 'search'}>
           搜索
