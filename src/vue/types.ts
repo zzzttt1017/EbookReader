@@ -1,6 +1,8 @@
 import type { PropType } from 'vue'
 import type { EBookReaderHandle, ProgressInfo, SearchOptions } from '../core/types.js'
 
+export type MobilePanel = 'menu' | 'search' | 'progress' | 'theme' | 'font'
+
 export type EBookReaderVueExposed = Pick<
   EBookReaderHandle,
   'prevPage' | 'nextPage' | 'prevSection' | 'nextSection' | 'goTo' | 'goToFraction' | 'search' | 'cancelSearch' | 'clearSearch'
@@ -36,4 +38,6 @@ export type EBookReaderVueEmits = {
   (e: 'progress', info: ProgressInfo): void
   (e: 'fontSizeChange', fontSize: number): void
   (e: 'darkModeChange', darkMode: boolean): void
+  (e: 'update:fontSize', fontSize: number): void
+  (e: 'update:darkMode', darkMode: boolean): void
 }

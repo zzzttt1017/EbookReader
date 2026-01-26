@@ -39,6 +39,7 @@ export type EBookReaderOptions = {
   onProgress?: (info: ProgressInfo) => void
   onToc?: (toc: TocItem[]) => void
   onSearchProgress?: (info: { progress?: number; done?: boolean }) => void
+  onContentLoad?: (doc: Document) => void
 }
 
 export type EBookReaderHandle = {

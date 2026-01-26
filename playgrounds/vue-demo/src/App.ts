@@ -18,7 +18,7 @@ export default defineComponent({
               file.value = e?.target?.files?.[0] ?? null
             },
           }),
-          h('span', { class: 'app__file' }, file.value?.name ?? '未选择文件'),
+          // h('span', { class: 'app__file' }, file.value?.name ?? '未选择文件'),
         ]),
         h('main', { class: 'app__main' }, [h(EBookReaderVue, { file: file.value })]),
       ])

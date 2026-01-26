@@ -12,7 +12,7 @@ export default function App() {
     <div className="app">
       <header className="app__header">
         <input type="file" accept=".epub" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <span className="app__file">{fileName}</span>
+        {/* <span className="app__file">{fileName}</span> */}
       </header>
       <main className="app__main">
         <EBookReader file={file} />

@@ -1,51 +1,28 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { createEBookReader } from '../core/reader.js'
-import type { ProgressInfo, SearchOptions, SearchResult, TocItem } from '../core/types.js'
-import type { EBookReaderReactHandle, EBookReaderReactProps } from './types.js'
+import type { ProgressInfo, TocItem } from '../core/types.js'
+import type { EBookReaderReactHandle, EBookReaderReactProps, SearchState, MobilePanel } from './types.js'
+import { DesktopToolbar } from './components/DesktopToolbar'
+import { DesktopBottomBar } from './components/DesktopBottomBar'
+import { TocDrawer } from './components/TocDrawer'
+import { SearchDrawer } from './components/SearchDrawer'
+import { MobileUI } from './components/MobileUI'
 
-type SearchState = {
-  query: string
-  options: SearchOptions
-  progressPercent: number
-  searching: boolean
-  results: SearchResult[]
-}
+const MOBILE_MAX_WIDTH = 768
+const WIDE_MIN_WIDTH = 1024
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
 const mergeClassName = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(' ')
 
-const renderTocItems = (items: TocItem[], onSelect: (href?: string) => void) => {
-  return (
-    <ul className="ebook-reader__toc-list">
-      {items.map((item, idx) => {
-        const key = item.href || `${item.label ?? 'item'}-${idx}`
-        const hasChildren = Boolean(item.subitems?.length)
-        const label = item.label || item.href || '未命名'
-
-        if (!hasChildren) {
-          return (
-            <li key={key} className="ebook-reader__toc-item">
-              <button type="button" className="ebook-reader__toc-btn" onClick={() => onSelect(item.href)}>
-                {label}
-              </button>
-            </li>
-          )
-        }
-
-        return (
-          <li key={key} className="ebook-reader__toc-item">
-            <details className="ebook-reader__toc-details">
-              <summary className="ebook-reader__toc-summary">{label}</summary>
-              {renderTocItems(item.subitems ?? [], onSelect)}
-            </details>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
+/**
+ * EBookReader 组件
+ *
+ * 核心阅读器组件，负责：
+ * 1. 管理核心 Reader 实例 (createEBookReader)
+ * 2. 管理 UI 状态 (布局、弹窗、搜索状态等)
+ * 3. 分发事件和数据给子组件 (Desktop/Mobile)
+ */
 export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactProps>(function EBookReader(
   {
     file,
@@ -92,9 +69,139 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     results: [],
   })
 
+  const [layout, setLayout] = useState<'mobile' | 'default' | 'wide'>('default')
+  const [mobileBarVisible, setMobileBarVisible] = useState(false)
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel | null>(null)
+  const layoutRef = useRef(layout)
+  const boundDocsRef = useRef(new WeakSet<Document>())
+  const gestureRef = useRef({ startX: 0, startY: 0, startAt: 0, tracking: false, moved: false, actionTaken: false })
+
   const percentage = useMemo(() => Math.round((progressInfo?.fraction ?? 0) * 100), [progressInfo])
   const displayedPercent = isSeeking ? seekPercent : percentage
   const sectionLabel = progressInfo?.tocItem?.label ?? ''
+
+  // 监听容器大小变化，切换布局模式
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width ?? el.getBoundingClientRect().width
+      const next = w <= MOBILE_MAX_WIDTH ? 'mobile' : w >= WIDE_MIN_WIDTH ? 'wide' : 'default'
+      setLayout((prev) => (prev === next ? prev : next))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // 布局切换时重置移动端面板状态
+  useEffect(() => {
+    if (layout === 'mobile') return
+    setMobilePanel(null)
+    setMobileBarVisible(false)
+  }, [layout])
+
+  useEffect(() => {
+    layoutRef.current = layout
+  }, [layout])
+
+  const closeMobileSheet = useCallback(() => setMobilePanel(null), [])
+
+  const toggleMobilePanel = useCallback((panel: MobilePanel) => {
+    setMobileBarVisible(true)
+    setMobilePanel((prev) => (prev === panel ? null : panel))
+  }, [])
+
+  const onPointerDown = useCallback((e: PointerEvent) => {
+    if (layoutRef.current !== 'mobile') return
+    const t = e.target as HTMLElement | null
+    if (!t) return
+    if (t.closest('.ebook-reader__mbar') || t.closest('.ebook-reader__msheet')) return
+    if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
+    gestureRef.current.tracking = true
+    gestureRef.current.moved = false
+    gestureRef.current.actionTaken = false
+    gestureRef.current.startAt = e.timeStamp
+    gestureRef.current.startX = e.screenX
+    gestureRef.current.startY = e.screenY
+  }, [])
+
+  const onPointerMove = useCallback((e: PointerEvent) => {
+    if (!gestureRef.current.tracking) return
+    const dx = e.screenX - gestureRef.current.startX
+    const dy = e.screenY - gestureRef.current.startY
+
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) gestureRef.current.moved = true
+    if (Math.abs(dy) < 8) return
+
+    if (Math.abs(dy) < Math.abs(dx)) {
+      if (Math.abs(dx) >= 8) gestureRef.current.tracking = false
+      return
+    }
+
+    if (dy <= -24) {
+      gestureRef.current.actionTaken = true
+      gestureRef.current.tracking = false
+      setMobileBarVisible(true)
+      return
+    }
+    if (dy >= 24) {
+      gestureRef.current.actionTaken = true
+      gestureRef.current.tracking = false
+      setMobileBarVisible(false)
+      setMobilePanel(null)
+    }
+  }, [])
+
+  const onPointerEnd = useCallback((e: PointerEvent) => {
+    if (layoutRef.current !== 'mobile') {
+      gestureRef.current.tracking = false
+      return
+    }
+
+    if (gestureRef.current.actionTaken) {
+      gestureRef.current.tracking = false
+      gestureRef.current.moved = false
+      gestureRef.current.actionTaken = false
+      return
+    }
+
+    if (!gestureRef.current.tracking) {
+      gestureRef.current.moved = false
+      return
+    }
+
+    const dx = e.screenX - gestureRef.current.startX
+    const dy = e.screenY - gestureRef.current.startY
+    const dt = e.timeStamp - gestureRef.current.startAt
+    const isTap = !gestureRef.current.moved && Math.hypot(dx, dy) <= 10 && dt <= 300
+
+    if (isTap) {
+      setMobileBarVisible((prev) => {
+        const next = !prev
+        if (!next) setMobilePanel(null)
+        return next
+      })
+    }
+
+    gestureRef.current.tracking = false
+    gestureRef.current.moved = false
+  }, [])
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    root.addEventListener('pointerdown', onPointerDown)
+    root.addEventListener('pointermove', onPointerMove)
+    root.addEventListener('pointerup', onPointerEnd)
+    root.addEventListener('pointercancel', onPointerEnd)
+
+    return () => {
+      root.removeEventListener('pointerdown', onPointerDown)
+      root.removeEventListener('pointermove', onPointerMove)
+      root.removeEventListener('pointerup', onPointerEnd)
+      root.removeEventListener('pointercancel', onPointerEnd)
+    }
+  }, [onPointerDown, onPointerMove, onPointerEnd])
 
   const setDarkModeInternal = useCallback(
     (next: boolean) => {
@@ -175,6 +282,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     [onError, search.options],
   )
 
+  // 初始化阅读器 Core
   useEffect(() => {
     const host = viewerHostRef.current
     if (!host) return
@@ -193,6 +301,14 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
         onSearchProgress: (info) => {
           const p = info.progress
           if (typeof p === 'number') setSearch((prev) => ({ ...prev, progressPercent: Math.round(p * 100) }))
+        },
+        onContentLoad: (doc) => {
+          if (boundDocsRef.current.has(doc)) return
+          boundDocsRef.current.add(doc)
+          doc.addEventListener('pointerdown', onPointerDown)
+          doc.addEventListener('pointermove', onPointerMove)
+          doc.addEventListener('pointerup', onPointerEnd)
+          doc.addEventListener('pointercancel', onPointerEnd)
         },
       })
       readerRef.current = reader
@@ -223,6 +339,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     readerRef.current?.setFontSize(fontSize)
   }, [fontSize])
 
+  // 键盘导航
   useEffect(() => {
     if (!enableKeyboardNav) return
     const root = rootRef.current
@@ -256,199 +373,108 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     [],
   )
 
+  // 子组件回调 Helpers
+  const handleSeekStart = useCallback(() => setIsSeeking(true), [])
+  const handleSeekChange = useCallback((v: number) => setSeekPercent(v), [])
+  const handleSeekEnd = useCallback((v: number) => {
+    setIsSeeking(false)
+    readerRef.current?.goToFraction(v / 100)
+  }, [])
+
+  const handleTocSelect = useCallback((href?: string) => {
+    if (href) readerRef.current?.goTo(href)
+  }, [])
+
+  const handleSearchResultSelect = useCallback((cfi: string) => {
+    if (cfi) readerRef.current?.goTo(cfi)
+  }, [])
+
   return (
     <div
       ref={rootRef}
       className={mergeClassName('ebook-reader', className)}
       style={style}
       data-theme={darkMode ? 'dark' : 'light'}
+      data-layout={layout}
       tabIndex={0}
     >
       <div className="ebook-reader__viewer" ref={viewerHostRef} />
 
-      <div className="ebook-reader__toolbar">
-        <div className="ebook-reader__panel">
-          <button type="button" className="ebook-reader__btn" onClick={() => setTocOpen(true)} title="目录">
-            目录
-          </button>
-          <button type="button" className="ebook-reader__btn" onClick={() => setSearchOpen(true)} title="搜索">
-            搜索
-          </button>
-          <div className="ebook-reader__divider" />
-          <button type="button" className="ebook-reader__btn" onClick={() => readerRef.current?.prevSection()} title="上一章">
-            上一章
-          </button>
-          <button type="button" className="ebook-reader__btn" onClick={() => readerRef.current?.prevPage()} title="上一页">
-            上一页
-          </button>
-          <button type="button" className="ebook-reader__btn" onClick={() => readerRef.current?.nextPage()} title="下一页">
-            下一页
-          </button>
-          <button type="button" className="ebook-reader__btn" onClick={() => readerRef.current?.nextSection()} title="下一章">
-            下一章
-          </button>
-        </div>
-
-        <div className="ebook-reader__panel">
-          <button type="button" className="ebook-reader__btn" onClick={() => setDarkModeInternal(!darkMode)} title="主题">
-            {darkMode ? '亮色' : '暗黑'}
-          </button>
-          <div className="ebook-reader__divider" />
-          <button type="button" className="ebook-reader__btn" onClick={() => setFontSizeInternal(fontSize + 10)} title="增大字号">
-            A+
-          </button>
-          <div className="ebook-reader__font">{fontSize}%</div>
-          <button type="button" className="ebook-reader__btn" onClick={() => setFontSizeInternal(fontSize - 10)} title="减小字号">
-            A-
-          </button>
-        </div>
-      </div>
-
-      {(tocOpen || searchOpen) && <div className="ebook-reader__overlay" onClick={closeDrawers} />}
-
-      <aside className={mergeClassName('ebook-reader__drawer', tocOpen ? 'is-open' : undefined)} aria-hidden={!tocOpen}>
-        <div className="ebook-reader__drawer-header">
-          <div className="ebook-reader__drawer-title">目录</div>
-          <button type="button" className="ebook-reader__btn" onClick={() => setTocOpen(false)}>
-            关闭
-          </button>
-        </div>
-        <div className="ebook-reader__drawer-body">
-          {toc.length ? (
-            renderTocItems(toc, (href) => {
-              if (href) readerRef.current?.goTo(href)
-              setTocOpen(false)
-            })
-          ) : (
-            <div className="ebook-reader__empty">未找到目录</div>
-          )}
-        </div>
-      </aside>
-
-      <aside className={mergeClassName('ebook-reader__drawer', 'right', searchOpen ? 'is-open' : undefined)} aria-hidden={!searchOpen}>
-        <div className="ebook-reader__drawer-header">
-          <div className="ebook-reader__drawer-title">搜索</div>
-          <button type="button" className="ebook-reader__btn" onClick={() => setSearchOpen(false)}>
-            关闭
-          </button>
-        </div>
-        <div className="ebook-reader__drawer-body">
-          <div className="ebook-reader__field">
-            <input
-              className="ebook-reader__input"
-              placeholder="输入关键词"
-              value={search.query}
-              onChange={(e) => {
-                const v = e.target.value
-                setSearch((prev) => ({ ...prev, query: v }))
-                if (!v.trim()) void runSearch('')
-              }}
-              disabled={status !== 'ready'}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void runSearch(search.query)
-              }}
-            />
-            <button type="button" className="ebook-reader__btn" onClick={() => void runSearch(search.query)} disabled={status !== 'ready'}>
-              搜索
-            </button>
-          </div>
-
-          <div className="ebook-reader__checks">
-            <label className="ebook-reader__check">
-              <input
-                type="checkbox"
-                checked={Boolean(search.options.matchCase)}
-                onChange={(e) => setSearch((prev) => ({ ...prev, options: { ...prev.options, matchCase: e.target.checked } }))}
-              />
-              区分大小写
-            </label>
-            <label className="ebook-reader__check">
-              <input
-                type="checkbox"
-                checked={Boolean(search.options.wholeWords)}
-                onChange={(e) => setSearch((prev) => ({ ...prev, options: { ...prev.options, wholeWords: e.target.checked } }))}
-              />
-              全词匹配
-            </label>
-            <label className="ebook-reader__check">
-              <input
-                type="checkbox"
-                checked={Boolean(search.options.matchDiacritics)}
-                onChange={(e) => setSearch((prev) => ({ ...prev, options: { ...prev.options, matchDiacritics: e.target.checked } }))}
-              />
-              区分变音
-            </label>
-          </div>
-
-          <div className="ebook-reader__meta">
-            <span>进度 {search.progressPercent}%</span>
-            {search.searching ? <span>搜索中…</span> : null}
-            {search.searching ? (
-              <button type="button" className="ebook-reader__link" onClick={() => readerRef.current?.cancelSearch()}>
-                取消
-              </button>
-            ) : null}
-          </div>
-
-          {search.results.length ? (
-            <ul className="ebook-reader__search-list">
-              {search.results.map((r, idx) => (
-                <li key={`${r.cfi ?? 'no-cfi'}-${idx}`} className="ebook-reader__search-item">
-                  <button
-                    type="button"
-                    className="ebook-reader__search-btn"
-                    onClick={() => {
-                      if (r.cfi) readerRef.current?.goTo(r.cfi)
-                    }}
-                  >
-                    {r.label ? <div className="ebook-reader__search-label">{r.label}</div> : null}
-                    <div className="ebook-reader__search-excerpt">
-                      {typeof r.excerpt === 'string'
-                        ? r.excerpt
-                        : `${r.excerpt?.pre ?? ''}${r.excerpt?.match ?? ''}${r.excerpt?.post ?? ''}`}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="ebook-reader__empty">{search.query.trim() ? '无匹配结果' : '请输入关键词'}</div>
-          )}
-        </div>
-      </aside>
-
-      <div className="ebook-reader__bottom">
-        <div className="ebook-reader__bottom-left">
-          <span className="ebook-reader__status">{status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪'}</span>
-          {sectionLabel ? <span className="ebook-reader__section">{sectionLabel}</span> : null}
-        </div>
-        <div className="ebook-reader__bottom-right">
-          <input
-            className="ebook-reader__range"
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={displayedPercent}
-            onChange={(e) => {
-              setIsSeeking(true)
-              setSeekPercent(Number(e.target.value))
-            }}
-            onPointerUp={(e) => {
-              const v = Number((e.target as HTMLInputElement).value)
-              setIsSeeking(false)
-              readerRef.current?.goToFraction(v / 100)
-            }}
-            onKeyUp={(e) => {
-              if (e.key !== 'Enter') return
-              const v = Number((e.target as HTMLInputElement).value)
-              setIsSeeking(false)
-              readerRef.current?.goToFraction(v / 100)
-            }}
+      {layout === 'mobile' ? (
+        <MobileUI
+          barVisible={mobileBarVisible}
+          activePanel={mobilePanel}
+          onTogglePanel={toggleMobilePanel}
+          onClosePanel={closeMobileSheet}
+          toc={toc}
+          search={search}
+          status={status}
+          errorText={errorText}
+          sectionLabel={sectionLabel}
+          displayedPercent={displayedPercent}
+          darkMode={darkMode}
+          fontSize={fontSize}
+          onTocSelect={handleTocSelect}
+          onSearch={(q) => void runSearch(q)}
+          onSearchQueryChange={(v) => setSearch((prev) => ({ ...prev, query: v }))}
+          onSearchOptionChange={(opt) => setSearch((prev) => ({ ...prev, options: { ...prev.options, ...opt } }))}
+          onCancelSearch={() => readerRef.current?.cancelSearch()}
+          onSearchResultSelect={handleSearchResultSelect}
+          onSeekStart={handleSeekStart}
+          onSeekChange={handleSeekChange}
+          onSeekEnd={handleSeekEnd}
+          onSeekCommit={handleSeekEnd}
+          onToggleDarkMode={setDarkModeInternal}
+          onFontSizeChange={setFontSizeInternal}
+        />
+      ) : (
+        <>
+          <DesktopToolbar
+            onToggleToc={() => setTocOpen(true)}
+            onToggleSearch={() => setSearchOpen(true)}
+            onPrevSection={() => readerRef.current?.prevSection()}
+            onPrevPage={() => readerRef.current?.prevPage()}
+            onNextPage={() => readerRef.current?.nextPage()}
+            onNextSection={() => readerRef.current?.nextSection()}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkModeInternal(!darkMode)}
+            fontSize={fontSize}
+            onFontSizeChange={setFontSizeInternal}
           />
-          <span className="ebook-reader__percent">{displayedPercent}%</span>
-        </div>
-      </div>
+
+          {(tocOpen || searchOpen) && <div className="ebook-reader__overlay" onClick={closeDrawers} />}
+
+          <TocDrawer
+            isOpen={tocOpen}
+            onClose={() => setTocOpen(false)}
+            toc={toc}
+            onSelect={handleTocSelect}
+          />
+
+          <SearchDrawer
+            isOpen={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            status={status}
+            search={search}
+            onSearch={(q) => void runSearch(q)}
+            onQueryChange={(v) => setSearch((prev) => ({ ...prev, query: v }))}
+            onOptionChange={(opt) => setSearch((prev) => ({ ...prev, options: { ...prev.options, ...opt } }))}
+            onCancelSearch={() => readerRef.current?.cancelSearch()}
+            onResultSelect={handleSearchResultSelect}
+          />
+
+          <DesktopBottomBar
+            status={status}
+            errorText={errorText}
+            sectionLabel={sectionLabel}
+            displayedPercent={displayedPercent}
+            onSeekStart={handleSeekStart}
+            onSeekChange={handleSeekChange}
+            onSeekEnd={handleSeekEnd}
+            onSeekCommit={handleSeekEnd}
+          />
+        </>
+      )}
     </div>
   )
 })

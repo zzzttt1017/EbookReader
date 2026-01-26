@@ -1,52 +1,33 @@
-import { defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { VNode } from 'vue'
+import { defineComponent, getCurrentInstance, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createEBookReader } from '../core/reader.js'
 import type { ProgressInfo, SearchOptions, SearchResult, TocItem } from '../core/types.js'
 import { EBookReaderVuePropsDef } from './types.js'
-import type { EBookReaderVueEmits, EBookReaderVueExposed } from './types.js'
+import type { EBookReaderVueEmits, EBookReaderVueExposed, MobilePanel } from './types.js'
+import DesktopToolbar from './components/DesktopToolbar.vue'
+import DesktopBottomBar from './components/DesktopBottomBar.vue'
+import TocDrawer from './components/TocDrawer.vue'
+import SearchDrawer from './components/SearchDrawer.vue'
+import MobileUI from './components/MobileUI.vue'
+
+const MOBILE_MAX_WIDTH = 768
+const WIDE_MIN_WIDTH = 1024
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
 const mergeClassName = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(' ')
 
-const renderTocItems = (items: TocItem[], onSelect: (href?: string) => void): VNode => {
-  return h(
-    'ul',
-    { class: 'ebook-reader__toc-list' },
-    items.map((item, idx) => {
-      const key = item.href || `${item.label ?? 'item'}-${idx}`
-      const hasChildren = Boolean(item.subitems?.length)
-      const label = item.label || item.href || '未命名'
-
-      if (!hasChildren) {
-        return h('li', { key, class: 'ebook-reader__toc-item' }, [
-          h(
-            'button',
-            {
-              type: 'button',
-              class: 'ebook-reader__toc-btn',
-              onClick: () => onSelect(item.href),
-            },
-            label,
-          ),
-        ])
-      }
-
-      return h('li', { key, class: 'ebook-reader__toc-item' }, [
-        h('details', { class: 'ebook-reader__toc-details' }, [
-          h('summary', { class: 'ebook-reader__toc-summary' }, label),
-          renderTocItems(item.subitems ?? [], onSelect),
-        ]),
-      ])
-    }),
-  )
-}
-
 export const EBookReaderVue = defineComponent({
   name: 'EBookReaderVue',
   props: EBookReaderVuePropsDef,
-  emits: ['ready', 'error', 'progress', 'fontSizeChange', 'darkModeChange'],
+  emits: ['ready', 'error', 'progress', 'fontSizeChange', 'darkModeChange', 'update:fontSize', 'update:darkMode'],
   setup(props, { emit, expose }) {
+    const instance = getCurrentInstance()
+    const isPropProvided = (key: string) => {
+      const vnodeProps = instance?.vnode.props
+      if (!vnodeProps) return false
+      return Object.prototype.hasOwnProperty.call(vnodeProps, key)
+    }
+
     const rootEl = ref<HTMLElement | null>(null)
     const viewerHost = ref<HTMLElement | null>(null)
     const reader = ref<ReturnType<typeof createEBookReader> | null>(null)
@@ -61,11 +42,15 @@ export const EBookReaderVue = defineComponent({
     const isSeeking = ref(false)
     const seekPercent = ref(0)
 
+    const layout = ref<'mobile' | 'default' | 'wide'>('default')
+    const mobileBarVisible = ref(false)
+    const mobilePanel = ref<MobilePanel | null>(null)
+
     const uncontrolledFontSize = ref(props.defaultFontSize ?? 100)
     const uncontrolledDarkMode = ref(Boolean(props.defaultDarkMode))
 
     const fontSize = () => (props.fontSize ?? uncontrolledFontSize.value)
-    const darkMode = () => (props.darkMode ?? uncontrolledDarkMode.value)
+    const darkMode = () => (isPropProvided('darkMode') ? Boolean(props.darkMode) : uncontrolledDarkMode.value)
 
     const searchQuery = ref('')
     const searchOptions = ref<SearchOptions>(props.defaultSearchOptions ?? { matchCase: false, wholeWords: false, matchDiacritics: false })
@@ -78,8 +63,18 @@ export const EBookReaderVue = defineComponent({
       searchOpen.value = false
     }
 
+    const closeMobileSheet = () => {
+      mobilePanel.value = null
+    }
+
+    const toggleMobilePanel = (panel: MobilePanel) => {
+      mobileBarVisible.value = true
+      mobilePanel.value = mobilePanel.value === panel ? null : panel
+    }
+
     const setDarkModeInternal = (next: boolean) => {
-      if (props.darkMode == null) uncontrolledDarkMode.value = next
+      if (!isPropProvided('darkMode')) uncontrolledDarkMode.value = next
+      emit('update:darkMode', next)
       emit('darkModeChange', next)
       reader.value?.setDarkMode(next)
     }
@@ -87,6 +82,7 @@ export const EBookReaderVue = defineComponent({
     const setFontSizeInternal = (next: number) => {
       const safe = clamp(next, 50, 300)
       if (props.fontSize == null) uncontrolledFontSize.value = safe
+      emit('update:fontSize', safe)
       emit('fontSizeChange', safe)
       reader.value?.setFontSize(safe)
     }
@@ -146,6 +142,99 @@ export const EBookReaderVue = defineComponent({
       if (e.key === 'Escape') closeDrawers()
     }
 
+    let gestureStartX = 0
+    let gestureStartY = 0
+    let gestureTracking = false
+    let gestureMoved = false
+    let gestureActionTaken = false
+    let gestureStartAt = 0
+    const boundDocs = new WeakSet<Document>()
+
+    const pointerDownHandler = (e: PointerEvent) => {
+      if (layout.value !== 'mobile') return
+      const t = e.target as HTMLElement | null
+      if (!t) return
+      if (t.closest('.ebook-reader__mbar') || t.closest('.ebook-reader__msheet')) return
+      if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
+      gestureTracking = true
+      gestureMoved = false
+      gestureActionTaken = false
+      gestureStartAt = e.timeStamp
+      gestureStartX = e.screenX
+      gestureStartY = e.screenY
+    }
+
+    const pointerMoveHandler = (e: PointerEvent) => {
+      if (!gestureTracking) return
+      const dx = e.screenX - gestureStartX
+      const dy = e.screenY - gestureStartY
+
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) gestureMoved = true
+      if (Math.abs(dy) < 8) return
+
+      if (Math.abs(dy) < Math.abs(dx)) {
+        if (Math.abs(dx) >= 8) gestureTracking = false
+        return
+      }
+
+      if (dy <= -24) {
+        gestureActionTaken = true
+        gestureTracking = false
+        mobileBarVisible.value = true
+        return
+      }
+      if (dy >= 24) {
+        gestureActionTaken = true
+        gestureTracking = false
+        mobileBarVisible.value = false
+        mobilePanel.value = null
+      }
+    }
+
+    const pointerEndHandler = (e: PointerEvent) => {
+      if (layout.value !== 'mobile') {
+        gestureTracking = false
+        return
+      }
+
+      if (gestureActionTaken) {
+        gestureTracking = false
+        gestureMoved = false
+        gestureActionTaken = false
+        return
+      }
+
+      if (!gestureTracking) {
+        gestureMoved = false
+        return
+      }
+
+      const dx = e.screenX - gestureStartX
+      const dy = e.screenY - gestureStartY
+      const dt = e.timeStamp - gestureStartAt
+      const isTap = !gestureMoved && Math.hypot(dx, dy) <= 10 && dt <= 300
+
+      if (isTap) {
+        const next = !mobileBarVisible.value
+        mobileBarVisible.value = next
+        if (!next) mobilePanel.value = null
+      }
+
+      gestureTracking = false
+      gestureMoved = false
+    }
+
+    const bindContentPointerListeners = (doc: Document) => {
+      if (boundDocs.has(doc)) return
+      boundDocs.add(doc)
+      doc.addEventListener('pointerdown', pointerDownHandler)
+      doc.addEventListener('pointermove', pointerMoveHandler)
+      doc.addEventListener('pointerup', pointerEndHandler)
+      doc.addEventListener('pointercancel', pointerEndHandler)
+    }
+
+    let ro: ResizeObserver | null = null
+
     onMounted(async () => {
       await nextTick()
       const host = viewerHost.value
@@ -165,6 +254,7 @@ export const EBookReaderVue = defineComponent({
           onSearchProgress: (info) => {
             if (typeof info.progress === 'number') searchProgressPercent.value = Math.round(info.progress * 100)
           },
+          onContentLoad: (doc) => bindContentPointerListeners(doc),
         })
         status.value = 'ready'
       } catch (e: any) {
@@ -175,12 +265,33 @@ export const EBookReaderVue = defineComponent({
       }
 
       const root = rootEl.value
-      if (root) root.addEventListener('keydown', keydownHandler)
+      if (root) {
+        root.addEventListener('keydown', keydownHandler)
+        root.addEventListener('pointerdown', pointerDownHandler)
+        root.addEventListener('pointermove', pointerMoveHandler)
+        root.addEventListener('pointerup', pointerEndHandler)
+        root.addEventListener('pointercancel', pointerEndHandler)
+      }
+
+      if (root) {
+        ro = new ResizeObserver((entries) => {
+          const w = entries[0]?.contentRect?.width ?? root.getBoundingClientRect().width
+          layout.value = w <= MOBILE_MAX_WIDTH ? 'mobile' : w >= WIDE_MIN_WIDTH ? 'wide' : 'default'
+        })
+        ro.observe(root)
+      }
     })
 
     onBeforeUnmount(() => {
       const root = rootEl.value
-      if (root) root.removeEventListener('keydown', keydownHandler)
+      if (root) {
+        root.removeEventListener('keydown', keydownHandler)
+        root.removeEventListener('pointerdown', pointerDownHandler)
+        root.removeEventListener('pointermove', pointerMoveHandler)
+        root.removeEventListener('pointerup', pointerEndHandler)
+        root.removeEventListener('pointercancel', pointerEndHandler)
+      }
+      ro?.disconnect()
       reader.value?.destroy()
       reader.value = null
     })
@@ -202,6 +313,17 @@ export const EBookReaderVue = defineComponent({
       (v) => reader.value?.setFontSize(Number(v)),
     )
 
+    watch(
+      () => layout.value,
+      (v) => {
+        closeDrawers()
+        if (v !== 'mobile') {
+          mobilePanel.value = null
+          mobileBarVisible.value = false
+        }
+      },
+    )
+
     expose<EBookReaderVueExposed>({
       prevPage: () => reader.value?.prevPage(),
       nextPage: () => reader.value?.nextPage(),
@@ -218,6 +340,112 @@ export const EBookReaderVue = defineComponent({
       const pct = Math.round((progressInfo.value?.fraction ?? 0) * 100)
       const displayed = isSeeking.value ? seekPercent.value : pct
       const sectionLabel = progressInfo.value?.tocItem?.label ?? ''
+      const isMobile = layout.value === 'mobile'
+
+      const viewer = h('div', { class: 'ebook-reader__viewer', ref: viewerHost })
+
+      const children = isMobile
+        ? [
+            viewer,
+            h(MobileUI, {
+              barVisible: mobileBarVisible.value,
+              activePanel: mobilePanel.value,
+              toc: toc.value,
+              status: status.value,
+              errorText: errorText.value,
+              sectionLabel: sectionLabel,
+              displayedPercent: displayed,
+              darkMode: darkMode(),
+              fontSize: fontSize(),
+              searchQuery: searchQuery.value,
+              searchOptions: searchOptions.value,
+              searchProgressPercent: searchProgressPercent.value,
+              searching: searching.value,
+              searchResults: searchResults.value,
+              
+              onTogglePanel: toggleMobilePanel,
+              onClosePanel: closeMobileSheet,
+              onTocSelect: (href: string | undefined) => {
+                if (href) reader.value?.goTo(href)
+              },
+              onSearch: (q: string) => void runSearch(q),
+              'onUpdate:searchQuery': (v: string) => (searchQuery.value = v),
+              'onUpdate:searchOptions': (v: Partial<SearchOptions>) => (searchOptions.value = { ...searchOptions.value, ...v }),
+              onCancelSearch: () => reader.value?.cancelSearch(),
+              onSearchResultSelect: (cfi: string) => {
+                if (cfi) reader.value?.goTo(cfi)
+              },
+              onSeekStart: () => (isSeeking.value = true),
+              onSeekChange: (v: number) => (seekPercent.value = v),
+              onSeekEnd: (v: number) => {
+                isSeeking.value = false
+                reader.value?.goToFraction(v / 100)
+              },
+              onSeekCommit: (v: number) => {
+                isSeeking.value = false
+                reader.value?.goToFraction(v / 100)
+              },
+              onToggleDarkMode: setDarkModeInternal,
+              onChangeFontSize: setFontSizeInternal,
+            }),
+          ]
+        : [
+            viewer,
+            h(DesktopToolbar, {
+              darkMode: darkMode(),
+              fontSize: fontSize(),
+              onToggleToc: () => (tocOpen.value = true),
+              onToggleSearch: () => (searchOpen.value = true),
+              onPrevSection: () => reader.value?.prevSection(),
+              onPrevPage: () => reader.value?.prevPage(),
+              onNextPage: () => reader.value?.nextPage(),
+              onNextSection: () => reader.value?.nextSection(),
+              onToggleDarkMode: () => setDarkModeInternal(!darkMode()),
+              onChangeFontSize: setFontSizeInternal,
+            }),
+            tocOpen.value || searchOpen.value ? h('div', { class: 'ebook-reader__overlay', onClick: closeDrawers }) : null,
+            h(TocDrawer, {
+              isOpen: tocOpen.value,
+              toc: toc.value,
+              onClose: () => (tocOpen.value = false),
+              onSelect: (href: string | undefined) => {
+                if (href) reader.value?.goTo(href)
+              },
+            }),
+            h(SearchDrawer, {
+              isOpen: searchOpen.value,
+              status: status.value,
+              query: searchQuery.value,
+              options: searchOptions.value,
+              progressPercent: searchProgressPercent.value,
+              searching: searching.value,
+              results: searchResults.value,
+              onClose: () => (searchOpen.value = false),
+              onSearch: (q: string) => void runSearch(q),
+              'onUpdate:query': (v: string) => (searchQuery.value = v),
+              'onUpdate:options': (v: Partial<SearchOptions>) => (searchOptions.value = { ...searchOptions.value, ...v }),
+              onCancelSearch: () => reader.value?.cancelSearch(),
+              onSelectResult: (cfi: string) => {
+                if (cfi) reader.value?.goTo(cfi)
+              },
+            }),
+            h(DesktopBottomBar, {
+              status: status.value,
+              errorText: errorText.value,
+              sectionLabel: sectionLabel,
+              displayedPercent: displayed,
+              onSeekStart: () => (isSeeking.value = true),
+              onSeekChange: (v: number) => (seekPercent.value = v),
+              onSeekEnd: (v: number) => {
+                isSeeking.value = false
+                reader.value?.goToFraction(v / 100)
+              },
+              onSeekCommit: (v: number) => {
+                isSeeking.value = false
+                reader.value?.goToFraction(v / 100)
+              },
+            }),
+          ]
 
       return h(
         'div',
@@ -225,220 +453,10 @@ export const EBookReaderVue = defineComponent({
           ref: rootEl,
           class: 'ebook-reader',
           'data-theme': darkMode() ? 'dark' : 'light',
+          'data-layout': layout.value,
           tabindex: 0,
         },
-        [
-          h('div', { class: 'ebook-reader__viewer', ref: viewerHost }),
-
-          h('div', { class: 'ebook-reader__toolbar' }, [
-            h('div', { class: 'ebook-reader__panel' }, [
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '目录', onClick: () => (tocOpen.value = true) },
-                '目录',
-              ),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '搜索', onClick: () => (searchOpen.value = true) },
-                '搜索',
-              ),
-              h('div', { class: 'ebook-reader__divider' }),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '上一章', onClick: () => reader.value?.prevSection() },
-                '上一章',
-              ),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '上一页', onClick: () => reader.value?.prevPage() },
-                '上一页',
-              ),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '下一页', onClick: () => reader.value?.nextPage() },
-                '下一页',
-              ),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '下一章', onClick: () => reader.value?.nextSection() },
-                '下一章',
-              ),
-            ]),
-            h('div', { class: 'ebook-reader__panel' }, [
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '主题', onClick: () => setDarkModeInternal(!darkMode()) },
-                darkMode() ? '亮色' : '暗黑',
-              ),
-              h('div', { class: 'ebook-reader__divider' }),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '增大字号', onClick: () => setFontSizeInternal(fontSize() + 10) },
-                'A+',
-              ),
-              h('div', { class: 'ebook-reader__font' }, `${fontSize()}%`),
-              h(
-                'button',
-                { type: 'button', class: 'ebook-reader__btn', title: '减小字号', onClick: () => setFontSizeInternal(fontSize() - 10) },
-                'A-',
-              ),
-            ]),
-          ]),
-
-          tocOpen.value || searchOpen.value ? h('div', { class: 'ebook-reader__overlay', onClick: closeDrawers }) : null,
-
-          h('aside', { class: mergeClassName('ebook-reader__drawer', tocOpen.value ? 'is-open' : undefined), 'aria-hidden': !tocOpen.value }, [
-            h('div', { class: 'ebook-reader__drawer-header' }, [
-              h('div', { class: 'ebook-reader__drawer-title' }, '目录'),
-              h('button', { type: 'button', class: 'ebook-reader__btn', onClick: () => (tocOpen.value = false) }, '关闭'),
-            ]),
-            h('div', { class: 'ebook-reader__drawer-body' }, [
-              toc.value.length
-                ? renderTocItems(toc.value, (href) => {
-                    if (href) reader.value?.goTo(href)
-                    tocOpen.value = false
-                  })
-                : h('div', { class: 'ebook-reader__empty' }, '未找到目录'),
-            ]),
-          ]),
-
-          h(
-            'aside',
-            {
-              class: mergeClassName('ebook-reader__drawer', 'right', searchOpen.value ? 'is-open' : undefined),
-              'aria-hidden': !searchOpen.value,
-            },
-            [
-              h('div', { class: 'ebook-reader__drawer-header' }, [
-                h('div', { class: 'ebook-reader__drawer-title' }, '搜索'),
-                h('button', { type: 'button', class: 'ebook-reader__btn', onClick: () => (searchOpen.value = false) }, '关闭'),
-              ]),
-              h('div', { class: 'ebook-reader__drawer-body' }, [
-                h('div', { class: 'ebook-reader__field' }, [
-                  h('input', {
-                    class: 'ebook-reader__input',
-                    placeholder: '输入关键词',
-                    value: searchQuery.value,
-                    disabled: status.value !== 'ready',
-                    onInput: (e: any) => {
-                      const v = String(e?.target?.value ?? '')
-                      searchQuery.value = v
-                      if (!v.trim()) void runSearch('')
-                    },
-                    onKeydown: (e: KeyboardEvent) => {
-                      if (e.key === 'Enter') void runSearch(searchQuery.value)
-                    },
-                  }),
-                  h(
-                    'button',
-                    { type: 'button', class: 'ebook-reader__btn', disabled: status.value !== 'ready', onClick: () => void runSearch(searchQuery.value) },
-                    '搜索',
-                  ),
-                ]),
-                h('div', { class: 'ebook-reader__checks' }, [
-                  h('label', { class: 'ebook-reader__check' }, [
-                    h('input', {
-                      type: 'checkbox',
-                      checked: Boolean(searchOptions.value.matchCase),
-                      onChange: (e: any) => (searchOptions.value = { ...searchOptions.value, matchCase: Boolean(e?.target?.checked) }),
-                    }),
-                    '区分大小写',
-                  ]),
-                  h('label', { class: 'ebook-reader__check' }, [
-                    h('input', {
-                      type: 'checkbox',
-                      checked: Boolean(searchOptions.value.wholeWords),
-                      onChange: (e: any) => (searchOptions.value = { ...searchOptions.value, wholeWords: Boolean(e?.target?.checked) }),
-                    }),
-                    '全词匹配',
-                  ]),
-                  h('label', { class: 'ebook-reader__check' }, [
-                    h('input', {
-                      type: 'checkbox',
-                      checked: Boolean(searchOptions.value.matchDiacritics),
-                      onChange: (e: any) => (searchOptions.value = { ...searchOptions.value, matchDiacritics: Boolean(e?.target?.checked) }),
-                    }),
-                    '区分变音',
-                  ]),
-                ]),
-                h('div', { class: 'ebook-reader__meta' }, [
-                  h('span', null, `进度 ${searchProgressPercent.value}%`),
-                  searching.value ? h('span', null, '搜索中…') : null,
-                  searching.value
-                    ? h('button', { type: 'button', class: 'ebook-reader__link', onClick: () => reader.value?.cancelSearch() }, '取消')
-                    : null,
-                ]),
-                searchResults.value.length
-                  ? h(
-                      'ul',
-                      { class: 'ebook-reader__search-list' },
-                      searchResults.value.map((r, idx) =>
-                        h('li', { key: `${r.cfi ?? 'no-cfi'}-${idx}`, class: 'ebook-reader__search-item' }, [
-                          h(
-                            'button',
-                            {
-                              type: 'button',
-                              class: 'ebook-reader__search-btn',
-                              onClick: () => {
-                                if (r.cfi) reader.value?.goTo(r.cfi)
-                              },
-                            },
-                            [
-                              r.label ? h('div', { class: 'ebook-reader__search-label' }, r.label) : null,
-                              h(
-                                'div',
-                                { class: 'ebook-reader__search-excerpt' },
-                                typeof r.excerpt === 'string'
-                                  ? r.excerpt
-                                  : `${r.excerpt?.pre ?? ''}${r.excerpt?.match ?? ''}${r.excerpt?.post ?? ''}`,
-                              ),
-                            ],
-                          ),
-                        ]),
-                      ),
-                    )
-                  : h('div', { class: 'ebook-reader__empty' }, searchQuery.value.trim() ? '无匹配结果' : '请输入关键词'),
-              ]),
-            ],
-          ),
-
-          h('div', { class: 'ebook-reader__bottom' }, [
-            h('div', { class: 'ebook-reader__bottom-left' }, [
-              h(
-                'span',
-                { class: 'ebook-reader__status' },
-                status.value === 'error' ? errorText.value || '错误' : status.value === 'opening' ? '正在打开…' : '就绪',
-              ),
-              sectionLabel ? h('span', { class: 'ebook-reader__section' }, sectionLabel) : null,
-            ]),
-            h('div', { class: 'ebook-reader__bottom-right' }, [
-              h('input', {
-                class: 'ebook-reader__range',
-                type: 'range',
-                min: 0,
-                max: 100,
-                step: 1,
-                value: displayed,
-                onInput: (e: any) => {
-                  isSeeking.value = true
-                  seekPercent.value = Number(e?.target?.value ?? 0)
-                },
-                onPointerup: (e: any) => {
-                  const v = Number(e?.target?.value ?? 0)
-                  isSeeking.value = false
-                  reader.value?.goToFraction(v / 100)
-                },
-                onKeyup: (e: KeyboardEvent) => {
-                  if (e.key !== 'Enter') return
-                  const v = Number((e.target as HTMLInputElement)?.value ?? 0)
-                  isSeeking.value = false
-                  reader.value?.goToFraction(v / 100)
-                },
-              }),
-              h('span', { class: 'ebook-reader__percent' }, `${displayed}%`),
-            ]),
-          ]),
-        ],
+        children,
       )
     }
   },

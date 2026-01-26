@@ -1,5 +1,15 @@
 import type { CSSProperties } from 'react'
-import type { EBookReaderHandle, ProgressInfo, SearchOptions } from '../core/types.js'
+import type { EBookReaderHandle, ProgressInfo, SearchOptions, SearchResult } from '../core/types.js'
+
+export type SearchState = {
+  query: string
+  options: SearchOptions
+  progressPercent: number
+  searching: boolean
+  results: SearchResult[]
+}
+
+export type MobilePanel = 'menu' | 'search' | 'progress' | 'theme' | 'font'
 
 export type EBookReaderReactHandle = Pick<
   EBookReaderHandle,

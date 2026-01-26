@@ -59,6 +59,7 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
     onProgress,
     onToc,
     onSearchProgress,
+    onContentLoad,
   } = options
 
   let destroyed = false
@@ -89,8 +90,10 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
     })
   }
 
-  const handleLoad = () => {
+  const handleLoad = (e: Event) => {
     applyStyles()
+    const detail = (e as CustomEvent).detail as { doc?: Document } | undefined
+    if (detail?.doc) onContentLoad?.(detail.doc)
   }
 
   const handleRelocate = (e: Event) => {
@@ -98,7 +101,7 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
     onProgress?.(detail)
   }
 
-  viewer.addEventListener('load', handleLoad)
+  viewer.addEventListener('load', handleLoad as EventListener)
   viewer.addEventListener('relocate', handleRelocate as EventListener)
 
   container.appendChild(viewer)
