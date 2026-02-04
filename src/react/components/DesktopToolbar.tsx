@@ -1,3 +1,5 @@
+import { SvgIcon } from './SvgIcon'
+
 type DesktopToolbarProps = {
   onToggleToc: () => void
   onToggleSearch: () => void
@@ -30,37 +32,37 @@ export const DesktopToolbar = ({
     <div className="ebook-reader__toolbar">
       <div className="ebook-reader__panel">
         <button type="button" className="ebook-reader__btn" onClick={onToggleToc} title="目录">
-          目录！！
+          <SvgIcon name="list" />
         </button>
         <button type="button" className="ebook-reader__btn" onClick={onToggleSearch} title="搜索">
-          搜索
+          <SvgIcon name="search" />
         </button>
         <div className="ebook-reader__divider" />
         <button type="button" className="ebook-reader__btn" onClick={onPrevSection} title="上一章">
-          上一章
+          <SvgIcon name="chevrons-left" />
         </button>
         <button type="button" className="ebook-reader__btn" onClick={onPrevPage} title="上一页">
-          上一页
+          <SvgIcon name="chevron-left" />
         </button>
         <button type="button" className="ebook-reader__btn" onClick={onNextPage} title="下一页">
-          下一页
+          <SvgIcon name="chevron-right" />
         </button>
         <button type="button" className="ebook-reader__btn" onClick={onNextSection} title="下一章">
-          下一章
+          <SvgIcon name="chevrons-right" />
         </button>
       </div>
 
       <div className="ebook-reader__panel">
         <button type="button" className="ebook-reader__btn" onClick={onToggleDarkMode} title="主题">
-          {darkMode ? '亮色' : '暗黑'}
+          <SvgIcon name={darkMode ? 'sun' : 'moon'} />
         </button>
         <div className="ebook-reader__divider" />
         <button type="button" className="ebook-reader__btn" onClick={() => onFontSizeChange(fontSize + 10)} title="增大字号">
-          A+
+          <SvgIcon name="plus" />
         </button>
         <div className="ebook-reader__font">{fontSize}%</div>
         <button type="button" className="ebook-reader__btn" onClick={() => onFontSizeChange(fontSize - 10)} title="减小字号">
-          A-
+          <SvgIcon name="minus" />
         </button>
       </div>
     </div>

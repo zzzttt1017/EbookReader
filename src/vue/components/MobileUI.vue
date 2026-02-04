@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TocItem, SearchOptions, SearchResult } from '../../core/types'
 import TocTree from './TocTree.vue'
 import SearchResultList from './SearchResultList.vue'
+import SvgIcon from './SvgIcon.vue'
 import type { MobilePanel } from '../types'
 
 const props = defineProps<{
@@ -61,25 +62,112 @@ const mobileTitle = computed(() => {
 const updateSearchOption = (key: keyof SearchOptions, value: boolean) => {
   emit('update:searchOptions', { [key]: value })
 }
+
+const tooltip = ref<{ text: string, left: number } | null>(null)
+let timer: number | null = null
+
+const handleTouchStart = (e: TouchEvent, text: string) => {
+  const target = e.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  timer = window.setTimeout(() => {
+    tooltip.value = {
+      text,
+      left: rect.left + rect.width / 2
+    }
+  }, 500)
+}
+
+const handleTouchEnd = () => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  tooltip.value = null
+}
 </script>
 
 <template>
   <div>
     <div :class="['ebook-reader__mbar', { 'is-visible': barVisible }]">
-      <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'menu'" @click="emit('togglePanel', 'menu')">
-        目录
+      <div 
+        v-if="tooltip"
+        class="ebook-reader__tooltip"
+        :style="{
+          position: 'fixed',
+          bottom: '60px',
+          left: `${tooltip.left}px`,
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.8)',
+          color: '#fff',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          pointerEvents: 'none',
+          zIndex: 1000,
+          whiteSpace: 'nowrap'
+        }"
+      >
+        {{ tooltip.text }}
+      </div>
+      <button 
+        type="button" 
+        class="ebook-reader__btn" 
+        :aria-pressed="activePanel === 'menu'" 
+        @click="emit('togglePanel', 'menu')"
+        @touchstart="(e) => handleTouchStart(e, '目录')"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+        title="目录"
+      >
+        <SvgIcon name="list" />
       </button>
-      <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'search'" @click="emit('togglePanel', 'search')">
-        搜索
+      <button 
+        type="button" 
+        class="ebook-reader__btn" 
+        :aria-pressed="activePanel === 'search'" 
+        @click="emit('togglePanel', 'search')"
+        @touchstart="(e) => handleTouchStart(e, '搜索')"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+        title="搜索"
+      >
+        <SvgIcon name="search" />
       </button>
-      <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'progress'" @click="emit('togglePanel', 'progress')">
-        进度
+      <button 
+        type="button" 
+        class="ebook-reader__btn" 
+        :aria-pressed="activePanel === 'progress'" 
+        @click="emit('togglePanel', 'progress')"
+        @touchstart="(e) => handleTouchStart(e, '进度')"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+        title="进度"
+      >
+        <SvgIcon name="sliders" />
       </button>
-      <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'theme'" @click="emit('togglePanel', 'theme')">
-        明暗
+      <button 
+        type="button" 
+        class="ebook-reader__btn" 
+        :aria-pressed="activePanel === 'theme'" 
+        @click="emit('togglePanel', 'theme')"
+        @touchstart="(e) => handleTouchStart(e, '明暗')"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+        title="明暗"
+      >
+        <SvgIcon name="sun" />
       </button>
-      <button type="button" class="ebook-reader__btn" :aria-pressed="activePanel === 'font'" @click="emit('togglePanel', 'font')">
-        字号
+      <button 
+        type="button" 
+        class="ebook-reader__btn" 
+        :aria-pressed="activePanel === 'font'" 
+        @click="emit('togglePanel', 'font')"
+        @touchstart="(e) => handleTouchStart(e, '字号')"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+        title="字号"
+      >
+        <SvgIcon name="type" />
       </button>
     </div>
 
@@ -89,7 +177,7 @@ const updateSearchOption = (key: keyof SearchOptions, value: boolean) => {
       <div class="ebook-reader__msheet-header">
         <div class="ebook-reader__msheet-title">{{ mobileTitle }}</div>
         <button type="button" class="ebook-reader__btn" @click="emit('closePanel')">
-          关闭
+          <SvgIcon name="x" />
         </button>
       </div>
       <div class="ebook-reader__msheet-body">

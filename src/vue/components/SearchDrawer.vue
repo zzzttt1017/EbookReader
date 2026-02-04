@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SearchOptions, SearchResult } from '../../core/types'
 import SearchResultList from './SearchResultList.vue'
+import SvgIcon from './SvgIcon.vue'
 
 defineProps<{
   isOpen: boolean
@@ -31,7 +32,7 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
     <div class="ebook-reader__drawer-header">
       <div class="ebook-reader__drawer-title">搜索</div>
       <button type="button" class="ebook-reader__btn" @click="emit('close')">
-        关闭
+        <SvgIcon name="x" />
       </button>
     </div>
     <div class="ebook-reader__drawer-body">
@@ -49,7 +50,7 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
           @keydown.enter="emit('search', query)"
         />
         <button type="button" class="ebook-reader__btn" :disabled="status !== 'ready'" @click="emit('search', query)">
-          搜索
+          <SvgIcon name="search" />
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TocItem } from '../../core/types'
 import TocTree from './TocTree.vue'
+import SvgIcon from './SvgIcon.vue'
 
 defineProps<{
   isOpen: boolean
@@ -18,7 +19,7 @@ const emit = defineEmits<{
     <div class="ebook-reader__drawer-header">
       <div class="ebook-reader__drawer-title">目录</div>
       <button type="button" class="ebook-reader__btn" @click="emit('close')">
-        关闭
+        <SvgIcon name="x" />
       </button>
     </div>
     <div class="ebook-reader__drawer-body">

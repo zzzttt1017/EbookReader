@@ -1,5 +1,6 @@
 import type { TocItem } from '../../core/types.js'
 import { TocTree } from './TocTree'
+import { SvgIcon } from './SvgIcon'
 
 type TocDrawerProps = {
   isOpen: boolean
@@ -17,7 +18,7 @@ export const TocDrawer = ({ isOpen, onClose, toc, onSelect }: TocDrawerProps) =>
       <div className="ebook-reader__drawer-header">
         <div className="ebook-reader__drawer-title">目录</div>
         <button type="button" className="ebook-reader__btn" onClick={onClose}>
-          关闭
+          <SvgIcon name="x" />
         </button>
       </div>
       <div className="ebook-reader__drawer-body">

@@ -1,7 +1,9 @@
+import { useState, useRef } from 'react'
 import type { TocItem } from '../../core/types.js'
 import type { MobilePanel, SearchState } from '../types.js'
 import { TocTree } from './TocTree'
 import { SearchResultList } from './SearchResultList'
+import { SvgIcon } from './SvgIcon'
 
 type MobileUIProps = {
   barVisible: boolean
@@ -69,23 +71,111 @@ export const MobileUI = ({
 }: MobileUIProps) => {
   const mobileTitle = activePanel === 'menu' ? '目录' : activePanel === 'search' ? '搜索' : activePanel === 'progress' ? '进度' : activePanel === 'theme' ? '明暗' : activePanel === 'font' ? '字号' : ''
 
+  const [tooltip, setTooltip] = useState<{ text: string, left: number } | null>(null)
+  const timerRef = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent, text: string) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    // 长按 500ms 后显示提示
+    timerRef.current = window.setTimeout(() => {
+      setTooltip({
+        text,
+        left: rect.left + rect.width / 2
+      })
+    }, 500)
+  }
+
+  const handleTouchEnd = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    setTooltip(null)
+  }
+
   return (
     <>
       <div className={`ebook-reader__mbar ${barVisible ? 'is-visible' : ''}`}>
-        <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('menu')} aria-pressed={activePanel === 'menu'}>
-          目录
+        {tooltip && (
+          <div 
+            className="ebook-reader__tooltip" 
+            style={{ 
+              position: 'fixed', 
+              bottom: '60px', // 位于工具栏上方
+              left: tooltip.left,
+              transform: 'translateX(-50%)',
+              background: 'rgba(0,0,0,0.8)',
+              color: '#fff',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              pointerEvents: 'none',
+              zIndex: 1000,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {tooltip.text}
+          </div>
+        )}
+        <button 
+          type="button" 
+          className="ebook-reader__btn" 
+          onClick={() => onTogglePanel('menu')} 
+          aria-pressed={activePanel === 'menu'}
+          onTouchStart={(e) => handleTouchStart(e, '目录')}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title="目录"
+        >
+          <SvgIcon name="list" />
         </button>
-        <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('search')} aria-pressed={activePanel === 'search'}>
-          搜索
+        <button 
+          type="button" 
+          className="ebook-reader__btn" 
+          onClick={() => onTogglePanel('search')} 
+          aria-pressed={activePanel === 'search'}
+          onTouchStart={(e) => handleTouchStart(e, '搜索')}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title="搜索"
+        >
+          <SvgIcon name="search" />
         </button>
-        <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('progress')} aria-pressed={activePanel === 'progress'}>
-          进度
+        <button 
+          type="button" 
+          className="ebook-reader__btn" 
+          onClick={() => onTogglePanel('progress')} 
+          aria-pressed={activePanel === 'progress'}
+          onTouchStart={(e) => handleTouchStart(e, '进度')}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title="进度"
+        >
+          <SvgIcon name="sliders" />
         </button>
-        <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('theme')} aria-pressed={activePanel === 'theme'}>
-          明暗
+        <button 
+          type="button" 
+          className="ebook-reader__btn" 
+          onClick={() => onTogglePanel('theme')} 
+          aria-pressed={activePanel === 'theme'}
+          onTouchStart={(e) => handleTouchStart(e, '明暗')}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title="明暗"
+        >
+          <SvgIcon name="sun" />
         </button>
-        <button type="button" className="ebook-reader__btn" onClick={() => onTogglePanel('font')} aria-pressed={activePanel === 'font'}>
-          字号
+        <button 
+          type="button" 
+          className="ebook-reader__btn" 
+          onClick={() => onTogglePanel('font')} 
+          aria-pressed={activePanel === 'font'}
+          onTouchStart={(e) => handleTouchStart(e, '字号')}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title="字号"
+        >
+          <SvgIcon name="type" />
         </button>
       </div>
 
@@ -95,7 +185,7 @@ export const MobileUI = ({
         <div className="ebook-reader__msheet-header">
           <div className="ebook-reader__msheet-title">{mobileTitle}</div>
           <button type="button" className="ebook-reader__btn" onClick={onClosePanel}>
-            关闭
+            <SvgIcon name="x" />
           </button>
         </div>
         <div className="ebook-reader__msheet-body">

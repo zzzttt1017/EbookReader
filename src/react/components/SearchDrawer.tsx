@@ -1,5 +1,6 @@
 import type { SearchState } from '../types.js'
 import { SearchResultList } from './SearchResultList'
+import { SvgIcon } from './SvgIcon'
 
 type SearchDrawerProps = {
   isOpen: boolean
@@ -32,7 +33,7 @@ export const SearchDrawer = ({
       <div className="ebook-reader__drawer-header">
         <div className="ebook-reader__drawer-title">搜索</div>
         <button type="button" className="ebook-reader__btn" onClick={onClose}>
-          关闭
+          <SvgIcon name="x" />
         </button>
       </div>
       <div className="ebook-reader__drawer-body">
@@ -52,7 +53,7 @@ export const SearchDrawer = ({
             }}
           />
           <button type="button" className="ebook-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
-            搜索
+            <SvgIcon name="search" />
           </button>
         </div>
 
