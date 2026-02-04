@@ -36,10 +36,3 @@ const iconStyle = computed(() => {
   >
   </svg>
 </template>
-
-<style scoped>
-.ebook-reader-icon {
-  display: inline-block;
-  vertical-align: middle;
-}
-</style>

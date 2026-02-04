@@ -8,6 +8,11 @@
   --ebook-reader-bottom-bar-height: 40px;
 }
 
+.ebook-reader-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .ebook-reader[data-theme='dark'] {
   --ebook-reader-panel-bg: #141414;
   --ebook-reader-panel-fg: #e5e7eb;
