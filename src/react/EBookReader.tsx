@@ -115,7 +115,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     if (layoutRef.current !== 'mobile') return
     const t = e.target as HTMLElement | null
     if (!t) return
-    if (t.closest('.ebook-reader__mbar') || t.closest('.ebook-reader__msheet')) return
+    if (t.closest('.epub-reader__mbar') || t.closest('.epub-reader__msheet')) return
     if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
     gestureRef.current.tracking = true
     gestureRef.current.moved = false
@@ -392,13 +392,13 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   return (
     <div
       ref={rootRef}
-      className={mergeClassName('ebook-reader', className)}
+      className={mergeClassName('epub-reader', className)}
       style={style}
       data-theme={darkMode ? 'dark' : 'light'}
       data-layout={layout}
       tabIndex={0}
     >
-      <div className="ebook-reader__viewer" ref={viewerHostRef} />
+      <div className="epub-reader__viewer" ref={viewerHostRef} />
 
       {layout === 'mobile' ? (
         <MobileUI
@@ -442,7 +442,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
             onFontSizeChange={setFontSizeInternal}
           />
 
-          {(tocOpen || searchOpen) && <div className="ebook-reader__overlay" onClick={closeDrawers} />}
+          {(tocOpen || searchOpen) && <div className="epub-reader__overlay" onClick={closeDrawers} />}
 
           <TocDrawer
             isOpen={tocOpen}

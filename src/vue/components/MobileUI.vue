@@ -88,10 +88,10 @@ const handleTouchEnd = () => {
 
 <template>
   <div>
-    <div :class="['ebook-reader__mbar', { 'is-visible': barVisible }]">
+    <div :class="['epub-reader__mbar', { 'is-visible': barVisible }]">
       <div 
         v-if="tooltip"
-        class="ebook-reader__tooltip"
+        class="epub-reader__tooltip"
         :style="{
           position: 'fixed',
           bottom: '60px',
@@ -111,7 +111,7 @@ const handleTouchEnd = () => {
       </div>
       <button 
         type="button" 
-        class="ebook-reader__btn" 
+        class="epub-reader__btn" 
         :aria-pressed="activePanel === 'menu'" 
         @click="emit('togglePanel', 'menu')"
         @touchstart="(e) => handleTouchStart(e, '目录')"
@@ -123,7 +123,7 @@ const handleTouchEnd = () => {
       </button>
       <button 
         type="button" 
-        class="ebook-reader__btn" 
+        class="epub-reader__btn" 
         :aria-pressed="activePanel === 'search'" 
         @click="emit('togglePanel', 'search')"
         @touchstart="(e) => handleTouchStart(e, '搜索')"
@@ -135,7 +135,7 @@ const handleTouchEnd = () => {
       </button>
       <button 
         type="button" 
-        class="ebook-reader__btn" 
+        class="epub-reader__btn" 
         :aria-pressed="activePanel === 'progress'" 
         @click="emit('togglePanel', 'progress')"
         @touchstart="(e) => handleTouchStart(e, '进度')"
@@ -147,7 +147,7 @@ const handleTouchEnd = () => {
       </button>
       <button 
         type="button" 
-        class="ebook-reader__btn" 
+        class="epub-reader__btn" 
         :aria-pressed="activePanel === 'theme'" 
         @click="emit('togglePanel', 'theme')"
         @touchstart="(e) => handleTouchStart(e, '明暗')"
@@ -159,7 +159,7 @@ const handleTouchEnd = () => {
       </button>
       <button 
         type="button" 
-        class="ebook-reader__btn" 
+        class="epub-reader__btn" 
         :aria-pressed="activePanel === 'font'" 
         @click="emit('togglePanel', 'font')"
         @touchstart="(e) => handleTouchStart(e, '字号')"
@@ -171,16 +171,16 @@ const handleTouchEnd = () => {
       </button>
     </div>
 
-    <div v-if="activePanel" class="ebook-reader__moverlay" @click="emit('closePanel')" />
+    <div v-if="activePanel" class="epub-reader__moverlay" @click="emit('closePanel')" />
 
-    <div :class="['ebook-reader__msheet', { 'is-open': activePanel }]" :aria-hidden="!activePanel">
-      <div class="ebook-reader__msheet-header">
-        <div class="ebook-reader__msheet-title">{{ mobileTitle }}</div>
-        <button type="button" class="ebook-reader__btn" @click="emit('closePanel')">
+    <div :class="['epub-reader__msheet', { 'is-open': activePanel }]" :aria-hidden="!activePanel">
+      <div class="epub-reader__msheet-header">
+        <div class="epub-reader__msheet-title">{{ mobileTitle }}</div>
+        <button type="button" class="epub-reader__btn" @click="emit('closePanel')">
           <SvgIcon name="x" />
         </button>
       </div>
-      <div class="ebook-reader__msheet-body">
+      <div class="epub-reader__msheet-body">
         <template v-if="activePanel === 'menu'">
           <TocTree
             v-if="toc.length"
@@ -190,13 +190,13 @@ const handleTouchEnd = () => {
               emit('closePanel')
             }"
           />
-          <div v-else class="ebook-reader__empty">未找到目录</div>
+          <div v-else class="epub-reader__empty">未找到目录</div>
         </template>
 
         <template v-if="activePanel === 'search'">
-          <div class="ebook-reader__field">
+          <div class="epub-reader__field">
             <input
-              class="ebook-reader__input"
+              class="epub-reader__input"
               placeholder="输入关键词"
               :value="searchQuery"
               :disabled="status !== 'ready'"
@@ -207,13 +207,13 @@ const handleTouchEnd = () => {
               }"
               @keydown.enter="emit('search', searchQuery)"
             />
-            <button type="button" class="ebook-reader__btn" :disabled="status !== 'ready'" @click="emit('search', searchQuery)">
+            <button type="button" class="epub-reader__btn" :disabled="status !== 'ready'" @click="emit('search', searchQuery)">
               搜索
             </button>
           </div>
 
-          <div class="ebook-reader__checks">
-            <label class="ebook-reader__check">
+          <div class="epub-reader__checks">
+            <label class="epub-reader__check">
               <input
                 type="checkbox"
                 :checked="Boolean(searchOptions.matchCase)"
@@ -221,7 +221,7 @@ const handleTouchEnd = () => {
               />
               区分大小写
             </label>
-            <label class="ebook-reader__check">
+            <label class="epub-reader__check">
               <input
                 type="checkbox"
                 :checked="Boolean(searchOptions.wholeWords)"
@@ -229,7 +229,7 @@ const handleTouchEnd = () => {
               />
               全词匹配
             </label>
-            <label class="ebook-reader__check">
+            <label class="epub-reader__check">
               <input
                 type="checkbox"
                 :checked="Boolean(searchOptions.matchDiacritics)"
@@ -239,28 +239,28 @@ const handleTouchEnd = () => {
             </label>
           </div>
 
-          <div class="ebook-reader__meta">
+          <div class="epub-reader__meta">
             <span>进度 {{ searchProgressPercent }}%</span>
             <span v-if="searching">搜索中…</span>
-            <button v-if="searching" type="button" class="ebook-reader__link" @click="emit('cancelSearch')">
+            <button v-if="searching" type="button" class="epub-reader__link" @click="emit('cancelSearch')">
               取消
             </button>
           </div>
 
           <SearchResultList v-if="searchResults.length" :results="searchResults" @select="(cfi) => emit('searchResultSelect', cfi)" />
-          <div v-else class="ebook-reader__empty">{{ searchQuery.trim() ? '无匹配结果' : '请输入关键词' }}</div>
+          <div v-else class="epub-reader__empty">{{ searchQuery.trim() ? '无匹配结果' : '请输入关键词' }}</div>
         </template>
 
         <template v-if="activePanel === 'progress'">
-          <div class="ebook-reader__meta">
-            <span class="ebook-reader__status">
+          <div class="epub-reader__meta">
+            <span class="epub-reader__status">
               {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪' }}
             </span>
             <span v-if="sectionLabel">{{ sectionLabel }}</span>
           </div>
-          <div class="ebook-reader__mprogress">
+          <div class="epub-reader__mprogress">
             <input
-              class="ebook-reader__range"
+              class="epub-reader__range"
               type="range"
               :min="0"
               :max="100"
@@ -273,23 +273,23 @@ const handleTouchEnd = () => {
               @pointerup="(e: any) => emit('seekEnd', Number(e.target.value))"
               @keyup.enter="(e: any) => emit('seekCommit', Number(e.target.value))"
             />
-            <div class="ebook-reader__mprogress-percent">{{ displayedPercent }}%</div>
+            <div class="epub-reader__mprogress-percent">{{ displayedPercent }}%</div>
           </div>
         </template>
 
         <template v-if="activePanel === 'theme'">
-          <button type="button" class="ebook-reader__btn" @click="emit('toggleDarkMode', !darkMode)">
+          <button type="button" class="epub-reader__btn" @click="emit('toggleDarkMode', !darkMode)">
             {{ darkMode ? '切换到亮色' : '切换到暗黑' }}
           </button>
         </template>
 
         <template v-if="activePanel === 'font'">
-          <div class="ebook-reader__mfont">
-            <button type="button" class="ebook-reader__btn" @click="emit('changeFontSize', fontSize - 10)">
+          <div class="epub-reader__mfont">
+            <button type="button" class="epub-reader__btn" @click="emit('changeFontSize', fontSize - 10)">
               A-
             </button>
-            <div class="ebook-reader__font">{{ fontSize }}%</div>
-            <button type="button" class="ebook-reader__btn" @click="emit('changeFontSize', fontSize + 10)">
+            <div class="epub-reader__font">{{ fontSize }}%</div>
+            <button type="button" class="epub-reader__btn" @click="emit('changeFontSize', fontSize + 10)">
               A+
             </button>
           </div>

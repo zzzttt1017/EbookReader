@@ -1,12 +1,12 @@
 {
-  "name": "@somecat/ebook-reader",
+  "name": "@somecat/epub-reader",
   "version": "0.1.0",
   "description": "A cross-framework EPUB ebook reader component library based on foliate-js",
   "license": "MIT",
   "author": "SomeCat <zt@somecat.cn>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zzzttt1017/EbookReader"
+    "url": "git+https://github.com/zzzttt1017/EbookReader.git"
   },
   "publishConfig": {
     "access": "public"

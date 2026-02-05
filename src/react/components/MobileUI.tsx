@@ -95,10 +95,10 @@ export const MobileUI = ({
 
   return (
     <>
-      <div className={`ebook-reader__mbar ${barVisible ? 'is-visible' : ''}`}>
+      <div className={`epub-reader__mbar ${barVisible ? 'is-visible' : ''}`}>
         {tooltip && (
           <div 
-            className="ebook-reader__tooltip" 
+            className="epub-reader__tooltip" 
             style={{ 
               position: 'fixed', 
               bottom: '60px', // 位于工具栏上方
@@ -119,7 +119,7 @@ export const MobileUI = ({
         )}
         <button 
           type="button" 
-          className="ebook-reader__btn" 
+          className="epub-reader__btn" 
           onClick={() => onTogglePanel('menu')} 
           aria-pressed={activePanel === 'menu'}
           onTouchStart={(e) => handleTouchStart(e, '目录')}
@@ -131,7 +131,7 @@ export const MobileUI = ({
         </button>
         <button 
           type="button" 
-          className="ebook-reader__btn" 
+          className="epub-reader__btn" 
           onClick={() => onTogglePanel('search')} 
           aria-pressed={activePanel === 'search'}
           onTouchStart={(e) => handleTouchStart(e, '搜索')}
@@ -143,7 +143,7 @@ export const MobileUI = ({
         </button>
         <button 
           type="button" 
-          className="ebook-reader__btn" 
+          className="epub-reader__btn" 
           onClick={() => onTogglePanel('progress')} 
           aria-pressed={activePanel === 'progress'}
           onTouchStart={(e) => handleTouchStart(e, '进度')}
@@ -155,7 +155,7 @@ export const MobileUI = ({
         </button>
         <button 
           type="button" 
-          className="ebook-reader__btn" 
+          className="epub-reader__btn" 
           onClick={() => onTogglePanel('theme')} 
           aria-pressed={activePanel === 'theme'}
           onTouchStart={(e) => handleTouchStart(e, '明暗')}
@@ -167,7 +167,7 @@ export const MobileUI = ({
         </button>
         <button 
           type="button" 
-          className="ebook-reader__btn" 
+          className="epub-reader__btn" 
           onClick={() => onTogglePanel('font')} 
           aria-pressed={activePanel === 'font'}
           onTouchStart={(e) => handleTouchStart(e, '字号')}
@@ -179,16 +179,16 @@ export const MobileUI = ({
         </button>
       </div>
 
-      {activePanel ? <div className="ebook-reader__moverlay" onClick={onClosePanel} /> : null}
+      {activePanel ? <div className="epub-reader__moverlay" onClick={onClosePanel} /> : null}
 
-      <div className={`ebook-reader__msheet ${activePanel ? 'is-open' : ''}`} aria-hidden={!activePanel}>
-        <div className="ebook-reader__msheet-header">
-          <div className="ebook-reader__msheet-title">{mobileTitle}</div>
-          <button type="button" className="ebook-reader__btn" onClick={onClosePanel}>
+      <div className={`epub-reader__msheet ${activePanel ? 'is-open' : ''}`} aria-hidden={!activePanel}>
+        <div className="epub-reader__msheet-header">
+          <div className="epub-reader__msheet-title">{mobileTitle}</div>
+          <button type="button" className="epub-reader__btn" onClick={onClosePanel}>
             <SvgIcon name="x" />
           </button>
         </div>
-        <div className="ebook-reader__msheet-body">
+        <div className="epub-reader__msheet-body">
           {activePanel === 'menu' ? (
             toc.length ? (
               <TocTree
@@ -199,15 +199,15 @@ export const MobileUI = ({
                 }}
               />
             ) : (
-              <div className="ebook-reader__empty">未找到目录</div>
+              <div className="epub-reader__empty">未找到目录</div>
             )
           ) : null}
 
           {activePanel === 'search' ? (
             <>
-              <div className="ebook-reader__field">
+              <div className="epub-reader__field">
                 <input
-                  className="ebook-reader__input"
+                  className="epub-reader__input"
                   placeholder="输入关键词"
                   value={search.query}
                   onChange={(e) => {
@@ -220,13 +220,13 @@ export const MobileUI = ({
                     if (e.key === 'Enter') onSearch(search.query)
                   }}
                 />
-                <button type="button" className="ebook-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
+                <button type="button" className="epub-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
                   搜索
                 </button>
               </div>
 
-              <div className="ebook-reader__checks">
-                <label className="ebook-reader__check">
+              <div className="epub-reader__checks">
+                <label className="epub-reader__check">
                   <input
                     type="checkbox"
                     checked={Boolean(search.options.matchCase)}
@@ -234,7 +234,7 @@ export const MobileUI = ({
                   />
                   区分大小写
                 </label>
-                <label className="ebook-reader__check">
+                <label className="epub-reader__check">
                   <input
                     type="checkbox"
                     checked={Boolean(search.options.wholeWords)}
@@ -242,7 +242,7 @@ export const MobileUI = ({
                   />
                   全词匹配
                 </label>
-                <label className="ebook-reader__check">
+                <label className="epub-reader__check">
                   <input
                     type="checkbox"
                     checked={Boolean(search.options.matchDiacritics)}
@@ -252,11 +252,11 @@ export const MobileUI = ({
                 </label>
               </div>
 
-              <div className="ebook-reader__meta">
+              <div className="epub-reader__meta">
                 <span>进度 {search.progressPercent}%</span>
                 {search.searching ? <span>搜索中…</span> : null}
                 {search.searching ? (
-                  <button type="button" className="ebook-reader__link" onClick={onCancelSearch}>
+                  <button type="button" className="epub-reader__link" onClick={onCancelSearch}>
                     取消
                   </button>
                 ) : null}
@@ -265,22 +265,22 @@ export const MobileUI = ({
               {search.results.length ? (
                 <SearchResultList results={search.results} onSelect={onSearchResultSelect} />
               ) : (
-                <div className="ebook-reader__empty">{search.query.trim() ? '无匹配结果' : '请输入关键词'}</div>
+                <div className="epub-reader__empty">{search.query.trim() ? '无匹配结果' : '请输入关键词'}</div>
               )}
             </>
           ) : null}
 
           {activePanel === 'progress' ? (
             <>
-              <div className="ebook-reader__meta">
-                <span className="ebook-reader__status">
+              <div className="epub-reader__meta">
+                <span className="epub-reader__status">
                   {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪'}
                 </span>
                 {sectionLabel ? <span>{sectionLabel}</span> : null}
               </div>
-              <div className="ebook-reader__mprogress">
+              <div className="epub-reader__mprogress">
                 <input
-                  className="ebook-reader__range"
+                  className="epub-reader__range"
                   type="range"
                   min={0}
                   max={100}
@@ -300,24 +300,24 @@ export const MobileUI = ({
                     onSeekCommit(v)
                   }}
                 />
-                <div className="ebook-reader__mprogress-percent">{displayedPercent}%</div>
+                <div className="epub-reader__mprogress-percent">{displayedPercent}%</div>
               </div>
             </>
           ) : null}
 
           {activePanel === 'theme' ? (
-            <button type="button" className="ebook-reader__btn" onClick={() => onToggleDarkMode(!darkMode)}>
+            <button type="button" className="epub-reader__btn" onClick={() => onToggleDarkMode(!darkMode)}>
               {darkMode ? '切换到亮色' : '切换到暗黑'}
             </button>
           ) : null}
 
           {activePanel === 'font' ? (
-            <div className="ebook-reader__mfont">
-              <button type="button" className="ebook-reader__btn" onClick={() => onFontSizeChange(fontSize - 10)}>
+            <div className="epub-reader__mfont">
+              <button type="button" className="epub-reader__btn" onClick={() => onFontSizeChange(fontSize - 10)}>
                 A-
               </button>
-              <div className="ebook-reader__font">{fontSize}%</div>
-              <button type="button" className="ebook-reader__btn" onClick={() => onFontSizeChange(fontSize + 10)}>
+              <div className="epub-reader__font">{fontSize}%</div>
+              <button type="button" className="epub-reader__btn" onClick={() => onFontSizeChange(fontSize + 10)}>
                 A+
               </button>
             </div>

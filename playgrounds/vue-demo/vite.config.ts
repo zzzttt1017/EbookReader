@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@somecat/ebook-reader/style.css': path.resolve(__dirname, '../../src/styles/ebook-reader.css'),
-      '@somecat/ebook-reader/vue': path.resolve(__dirname, '../../src/vue/index.ts'),
-      '@somecat/ebook-reader': path.resolve(__dirname, '../../src/index.ts'),
+      '@somecat/epub-reader/style.css': path.resolve(__dirname, '../../src/styles/epub-reader.css'),
+      '@somecat/epub-reader/vue': path.resolve(__dirname, '../../src/vue/index.ts'),
+      '@somecat/epub-reader': path.resolve(__dirname, '../../src/index.ts'),
     },
   },
   server: {

@@ -1,10 +1,10 @@
 # 项目上下文指南 (AGENTS.md)
 
-这份文档旨在为智能体（AI Agent）提供 `@somecat/ebook-reader` 项目的全面上下文信息，帮助理解架构设计、代码逻辑和业务规则。
+这份文档旨在为智能体（AI Agent）提供 `@somecat/epub-reader` 项目的全面上下文信息，帮助理解架构设计、代码逻辑和业务规则。
 
 ## 1. 项目概览
 
-*   **项目名称**: `@somecat/ebook-reader`
+*   **项目名称**: `@somecat/epub-reader`
 *   **主要目的**: 提供一个基于 Web Components 的跨框架 EPUB 电子书阅读器组件库。
 *   **核心价值**: 封装底层复杂的 EPUB 解析与渲染逻辑（基于 `foliate-js`），提供统一、易用的 API 和 UI 组件，支持 React 和 Vue 框架，开箱即用。
 *   **技术栈**:
@@ -27,7 +27,7 @@
     *   **`vue/`**: Vue 适配层。
         *   `EBookReaderVue.ts`: Vue 组件实现，功能与 React 版本对齐。
     *   **`styles/`**: 样式文件。
-        *   `ebook-reader.css`: 组件的核心样式。
+        *   `epub-reader.css`: 组件的核心样式。
 *   **`playgrounds/`**: 演示与开发环境。
     *   `react-demo/`: 基于 Vite + React 的测试应用。
     *   `vue-demo/`: 基于 Vite + Vue 的测试应用。
@@ -106,7 +106,7 @@
     *   React 组件使用 `.tsx`，大驼峰命名 (e.g., `EBookReader.tsx`).
     *   Vue 组件使用 `.ts` (TSX/Render Function 风格)，大驼峰命名.
     *   Core 逻辑使用 `.ts`.
-*   **样式管理**: 核心样式集中在 `src/styles/ebook-reader.css`，使用 CSS 变量（`--ebook-reader-*`）实现主题定制。
+*   **样式管理**: 核心样式集中在 `src/styles/epub-reader.css`，使用 CSS 变量（`--epub-reader-*`）实现主题定制。
 *   **代码风格**: 依赖 Prettier/ESLint（虽然未显式看到配置文件，但代码风格统一）。
 
 ## 9. 为智能体提供的上下文提示
@@ -116,7 +116,7 @@
 *   **代码分析重点**:
     *   如果涉及 **底层渲染问题** (如翻页、样式注入失败)，请重点查看 `src/core/reader.ts`。
     *   如果涉及 **UI 交互问题** (如目录打不开、进度条不更新)，请分别查看 `src/react/EBookReader.tsx` 或 `src/vue/EBookReaderVue.ts`。
-    *   如果涉及 **样式问题**，请直接修改 `src/styles/ebook-reader.css`，并注意 CSS 变量的定义。
+    *   如果涉及 **样式问题**，请直接修改 `src/styles/epub-reader.css`，并注意 CSS 变量的定义。
 
 *   **跨框架一致性**:
     *   本项目承诺 React 和 Vue 版本功能一致。如果你修改了 `src/react` 下的逻辑，**务必** 检查并同步修改 `src/vue` 下的对应逻辑，反之亦然。

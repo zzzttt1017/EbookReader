@@ -23,16 +23,16 @@ export const DesktopBottomBar = ({
   onSeekCommit,
 }: DesktopBottomBarProps) => {
   return (
-    <div className="ebook-reader__bottom">
-      <div className="ebook-reader__bottom-left">
-        <span className="ebook-reader__status">
+    <div className="epub-reader__bottom">
+      <div className="epub-reader__bottom-left">
+        <span className="epub-reader__status">
           {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪'}
         </span>
-        {sectionLabel ? <span className="ebook-reader__section">{sectionLabel}</span> : null}
+        {sectionLabel ? <span className="epub-reader__section">{sectionLabel}</span> : null}
       </div>
-      <div className="ebook-reader__bottom-right">
+      <div className="epub-reader__bottom-right">
         <input
-          className="ebook-reader__range"
+          className="epub-reader__range"
           type="range"
           min={0}
           max={100}
@@ -52,7 +52,7 @@ export const DesktopBottomBar = ({
             onSeekCommit(v)
           }}
         />
-        <span className="ebook-reader__percent">{displayedPercent}%</span>
+        <span className="epub-reader__percent">{displayedPercent}%</span>
       </div>
     </div>
   )

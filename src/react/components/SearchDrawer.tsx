@@ -29,17 +29,17 @@ export const SearchDrawer = ({
   onResultSelect,
 }: SearchDrawerProps) => {
   return (
-    <aside className={`ebook-reader__drawer right ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
-      <div className="ebook-reader__drawer-header">
-        <div className="ebook-reader__drawer-title">搜索</div>
-        <button type="button" className="ebook-reader__btn" onClick={onClose}>
+    <aside className={`epub-reader__drawer right ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
+      <div className="epub-reader__drawer-header">
+        <div className="epub-reader__drawer-title">搜索</div>
+        <button type="button" className="epub-reader__btn" onClick={onClose}>
           <SvgIcon name="x" />
         </button>
       </div>
-      <div className="ebook-reader__drawer-body">
-        <div className="ebook-reader__field">
+      <div className="epub-reader__drawer-body">
+        <div className="epub-reader__field">
           <input
-            className="ebook-reader__input"
+            className="epub-reader__input"
             placeholder="输入关键词"
             value={search.query}
             onChange={(e) => {
@@ -52,13 +52,13 @@ export const SearchDrawer = ({
               if (e.key === 'Enter') onSearch(search.query)
             }}
           />
-          <button type="button" className="ebook-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
+          <button type="button" className="epub-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
             <SvgIcon name="search" />
           </button>
         </div>
 
-        <div className="ebook-reader__checks">
-          <label className="ebook-reader__check">
+        <div className="epub-reader__checks">
+          <label className="epub-reader__check">
             <input
               type="checkbox"
               checked={Boolean(search.options.matchCase)}
@@ -66,7 +66,7 @@ export const SearchDrawer = ({
             />
             区分大小写
           </label>
-          <label className="ebook-reader__check">
+          <label className="epub-reader__check">
             <input
               type="checkbox"
               checked={Boolean(search.options.wholeWords)}
@@ -74,7 +74,7 @@ export const SearchDrawer = ({
             />
             全词匹配
           </label>
-          <label className="ebook-reader__check">
+          <label className="epub-reader__check">
             <input
               type="checkbox"
               checked={Boolean(search.options.matchDiacritics)}
@@ -84,11 +84,11 @@ export const SearchDrawer = ({
           </label>
         </div>
 
-        <div className="ebook-reader__meta">
+        <div className="epub-reader__meta">
           <span>进度 {search.progressPercent}%</span>
           {search.searching ? <span>搜索中…</span> : null}
           {search.searching ? (
-            <button type="button" className="ebook-reader__link" onClick={onCancelSearch}>
+            <button type="button" className="epub-reader__link" onClick={onCancelSearch}>
               取消
             </button>
           ) : null}
@@ -97,7 +97,7 @@ export const SearchDrawer = ({
         {search.results.length ? (
           <SearchResultList results={search.results} onSelect={onResultSelect} />
         ) : (
-          <div className="ebook-reader__empty">{search.query.trim() ? '无匹配结果' : '请输入关键词'}</div>
+          <div className="epub-reader__empty">{search.query.trim() ? '无匹配结果' : '请输入关键词'}</div>
         )}
       </div>
     </aside>

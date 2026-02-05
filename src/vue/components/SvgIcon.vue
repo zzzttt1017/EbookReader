@@ -31,7 +31,7 @@ const iconStyle = computed(() => {
     viewBox="0 0 24 24"
     fill="none"
     :style="iconStyle"
-    class="ebook-reader-icon"
+    class="epub-reader-icon"
     v-html="iconPath"
   >
   </svg>

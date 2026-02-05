@@ -11,16 +11,16 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <ul class="ebook-reader__toc-list">
-    <li v-for="(item, idx) in items" :key="item.href || `${item.label ?? 'item'}-${idx}`" class="ebook-reader__toc-item">
+  <ul class="epub-reader__toc-list">
+    <li v-for="(item, idx) in items" :key="item.href || `${item.label ?? 'item'}-${idx}`" class="epub-reader__toc-item">
       <template v-if="!item.subitems?.length">
-        <button type="button" class="ebook-reader__toc-btn" @click="emit('select', item.href)">
+        <button type="button" class="epub-reader__toc-btn" @click="emit('select', item.href)">
           {{ item.label || item.href || '未命名' }}
         </button>
       </template>
       <template v-else>
-        <details class="ebook-reader__toc-details">
-          <summary class="ebook-reader__toc-summary">{{ item.label || item.href || '未命名' }}</summary>
+        <details class="epub-reader__toc-details">
+          <summary class="epub-reader__toc-summary">{{ item.label || item.href || '未命名' }}</summary>
           <TocTree :items="item.subitems" @select="emit('select', $event)" />
         </details>
       </template>

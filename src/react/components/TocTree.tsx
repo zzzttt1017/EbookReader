@@ -11,7 +11,7 @@ type TocTreeProps = {
  */
 export const TocTree = ({ items, onSelect }: TocTreeProps) => {
   return (
-    <ul className="ebook-reader__toc-list">
+    <ul className="epub-reader__toc-list">
       {items.map((item, idx) => {
         const key = item.href || `${item.label ?? 'item'}-${idx}`
         const hasChildren = Boolean(item.subitems?.length)
@@ -19,8 +19,8 @@ export const TocTree = ({ items, onSelect }: TocTreeProps) => {
 
         if (!hasChildren) {
           return (
-            <li key={key} className="ebook-reader__toc-item">
-              <button type="button" className="ebook-reader__toc-btn" onClick={() => onSelect(item.href)}>
+            <li key={key} className="epub-reader__toc-item">
+              <button type="button" className="epub-reader__toc-btn" onClick={() => onSelect(item.href)}>
                 {label}
               </button>
             </li>
@@ -28,9 +28,9 @@ export const TocTree = ({ items, onSelect }: TocTreeProps) => {
         }
 
         return (
-          <li key={key} className="ebook-reader__toc-item">
-            <details className="ebook-reader__toc-details">
-              <summary className="ebook-reader__toc-summary">{label}</summary>
+          <li key={key} className="epub-reader__toc-item">
+            <details className="epub-reader__toc-details">
+              <summary className="epub-reader__toc-summary">{label}</summary>
               <TocTree items={item.subitems ?? []} onSelect={onSelect} />
             </details>
           </li>

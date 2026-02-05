@@ -154,7 +154,7 @@ export const EBookReaderVue = defineComponent({
       if (layout.value !== 'mobile') return
       const t = e.target as HTMLElement | null
       if (!t) return
-      if (t.closest('.ebook-reader__mbar') || t.closest('.ebook-reader__msheet')) return
+      if (t.closest('.epub-reader__mbar') || t.closest('.epub-reader__msheet')) return
       if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
       gestureTracking = true
       gestureMoved = false
@@ -342,7 +342,7 @@ export const EBookReaderVue = defineComponent({
       const sectionLabel = progressInfo.value?.tocItem?.label ?? ''
       const isMobile = layout.value === 'mobile'
 
-      const viewer = h('div', { class: 'ebook-reader__viewer', ref: viewerHost })
+      const viewer = h('div', { class: 'epub-reader__viewer', ref: viewerHost })
 
       const children = isMobile
         ? [
@@ -403,7 +403,7 @@ export const EBookReaderVue = defineComponent({
               onToggleDarkMode: () => setDarkModeInternal(!darkMode()),
               onChangeFontSize: setFontSizeInternal,
             }),
-            tocOpen.value || searchOpen.value ? h('div', { class: 'ebook-reader__overlay', onClick: closeDrawers }) : null,
+            tocOpen.value || searchOpen.value ? h('div', { class: 'epub-reader__overlay', onClick: closeDrawers }) : null,
             h(TocDrawer, {
               isOpen: tocOpen.value,
               toc: toc.value,
@@ -451,7 +451,7 @@ export const EBookReaderVue = defineComponent({
         'div',
         {
           ref: rootEl,
-          class: 'ebook-reader',
+          class: 'epub-reader',
           'data-theme': darkMode() ? 'dark' : 'light',
           'data-layout': layout.value,
           tabindex: 0,

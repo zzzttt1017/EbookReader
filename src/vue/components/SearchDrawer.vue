@@ -28,17 +28,17 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
 </script>
 
 <template>
-  <aside :class="['ebook-reader__drawer', 'right', { 'is-open': isOpen }]" :aria-hidden="!isOpen">
-    <div class="ebook-reader__drawer-header">
-      <div class="ebook-reader__drawer-title">搜索</div>
-      <button type="button" class="ebook-reader__btn" @click="emit('close')">
+  <aside :class="['epub-reader__drawer', 'right', { 'is-open': isOpen }]" :aria-hidden="!isOpen">
+    <div class="epub-reader__drawer-header">
+      <div class="epub-reader__drawer-title">搜索</div>
+      <button type="button" class="epub-reader__btn" @click="emit('close')">
         <SvgIcon name="x" />
       </button>
     </div>
-    <div class="ebook-reader__drawer-body">
-      <div class="ebook-reader__field">
+    <div class="epub-reader__drawer-body">
+      <div class="epub-reader__field">
         <input
-          class="ebook-reader__input"
+          class="epub-reader__input"
           placeholder="输入关键词"
           :value="query"
           :disabled="status !== 'ready'"
@@ -49,13 +49,13 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
           }"
           @keydown.enter="emit('search', query)"
         />
-        <button type="button" class="ebook-reader__btn" :disabled="status !== 'ready'" @click="emit('search', query)">
+        <button type="button" class="epub-reader__btn" :disabled="status !== 'ready'" @click="emit('search', query)">
           <SvgIcon name="search" />
         </button>
       </div>
 
-      <div class="ebook-reader__checks">
-        <label class="ebook-reader__check">
+      <div class="epub-reader__checks">
+        <label class="epub-reader__check">
           <input
             type="checkbox"
             :checked="Boolean(options.matchCase)"
@@ -63,7 +63,7 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
           />
           区分大小写
         </label>
-        <label class="ebook-reader__check">
+        <label class="epub-reader__check">
           <input
             type="checkbox"
             :checked="Boolean(options.wholeWords)"
@@ -71,7 +71,7 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
           />
           全词匹配
         </label>
-        <label class="ebook-reader__check">
+        <label class="epub-reader__check">
           <input
             type="checkbox"
             :checked="Boolean(options.matchDiacritics)"
@@ -81,16 +81,16 @@ const updateOption = (key: keyof SearchOptions, value: boolean) => {
         </label>
       </div>
 
-      <div class="ebook-reader__meta">
+      <div class="epub-reader__meta">
         <span>进度 {{ progressPercent }}%</span>
         <span v-if="searching">搜索中…</span>
-        <button v-if="searching" type="button" class="ebook-reader__link" @click="emit('cancelSearch')">
+        <button v-if="searching" type="button" class="epub-reader__link" @click="emit('cancelSearch')">
           取消
         </button>
       </div>
 
       <SearchResultList v-if="results.length" :results="results" @select="(cfi) => emit('selectResult', cfi)" />
-      <div v-else class="ebook-reader__empty">{{ query.trim() ? '无匹配结果' : '请输入关键词' }}</div>
+      <div v-else class="epub-reader__empty">{{ query.trim() ? '无匹配结果' : '请输入关键词' }}</div>
     </div>
   </aside>
 </template>

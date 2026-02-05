@@ -15,16 +15,16 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="ebook-reader__bottom">
-    <div class="ebook-reader__bottom-left">
-      <span class="ebook-reader__status">
+  <div class="epub-reader__bottom">
+    <div class="epub-reader__bottom-left">
+      <span class="epub-reader__status">
         {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪' }}
       </span>
-      <span v-if="sectionLabel" class="ebook-reader__section">{{ sectionLabel }}</span>
+      <span v-if="sectionLabel" class="epub-reader__section">{{ sectionLabel }}</span>
     </div>
-    <div class="ebook-reader__bottom-right">
+    <div class="epub-reader__bottom-right">
       <input
-        class="ebook-reader__range"
+        class="epub-reader__range"
         type="range"
         :min="0"
         :max="100"
@@ -37,7 +37,7 @@ const emit = defineEmits<{
         @pointerup="(e: any) => emit('seekEnd', Number(e.target.value))"
         @keyup.enter="(e: any) => emit('seekCommit', Number(e.target.value))"
       />
-      <span class="ebook-reader__percent">{{ displayedPercent }}%</span>
+      <span class="epub-reader__percent">{{ displayedPercent }}%</span>
     </div>
   </div>
 </template>
