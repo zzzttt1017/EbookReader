@@ -11,7 +11,14 @@
     "emitDeclarationOnly": false,
     "noEmit": true,
     "types": ["react", "react-dom"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@somecat/epub-reader": ["src/index.ts"],
+      "@somecat/epub-reader/core": ["src/core/index.ts"],
+      "@somecat/epub-reader/react": ["src/react/index.ts"],
+      "@somecat/epub-reader/vue": ["src/vue/index.ts"],
+      "@somecat/epub-reader/style.css": ["src/styles/epub-reader.css"]
+    }
   },
   "include": ["src", "tsup.config.mjs", "scripts", "playgrounds"]
 }

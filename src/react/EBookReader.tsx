@@ -15,6 +15,52 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 const mergeClassName = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(' ')
 
+const getFileNameFromContentDisposition = (contentDisposition: string | null) => {
+  if (!contentDisposition) return null
+  const starMatch = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+  if (starMatch?.[1]) {
+    try {
+      return decodeURIComponent(starMatch[1].replace(/^"|"$/g, ''))
+    } catch {
+      return starMatch[1].replace(/^"|"$/g, '')
+    }
+  }
+
+  const match = contentDisposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)
+  return match?.[1] ?? match?.[2] ?? null
+}
+
+const normalizeEpubFileName = (name: string) => {
+  const trimmed = name.trim()
+  if (!trimmed) return 'book.epub'
+  if (trimmed.toLowerCase().endsWith('.epub')) return trimmed
+  if (!trimmed.includes('.')) return `${trimmed}.epub`
+  return trimmed
+}
+
+const getFileNameFromUrl = (url: string) => {
+  try {
+    const u = new URL(url, window.location.href)
+    const last = u.pathname.split('/').filter(Boolean).pop()
+    return last ? decodeURIComponent(last) : null
+  } catch {
+    return null
+  }
+}
+
+const downloadEpubAsFile = async (url: string, signal: AbortSignal) => {
+  const res = await fetch(url, { signal })
+  if (!res.ok) throw new Error(`下载失败 (${res.status})`)
+  const blob = await res.blob()
+
+  const headerName = getFileNameFromContentDisposition(res.headers.get('content-disposition'))
+  const urlName = getFileNameFromUrl(url)
+  const fileName = normalizeEpubFileName(headerName ?? urlName ?? 'book.epub')
+  const type = blob.type || 'application/epub+zip'
+
+  return new File([blob], fileName, { type })
+}
+
 /**
  * EBookReader 组件
  *
@@ -26,6 +72,7 @@ const mergeClassName = (...parts: Array<string | undefined>) => parts.filter(Boo
 export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactProps>(function EBookReader(
   {
     file,
+    fileUrl,
     className,
     style,
     defaultFontSize = 100,
@@ -227,18 +274,22 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     setSearchOpen(false)
   }, [])
 
+  const prepareOpen = useCallback(() => {
+    setStatus('opening')
+    setErrorText('')
+    setToc([])
+    setProgressInfo(null)
+    setIsSeeking(false)
+    setSeekPercent(0)
+    setSearch((prev) => ({ ...prev, results: [], progressPercent: 0, searching: false }))
+  }, [])
+
   const handleOpenFile = useCallback(
     async (nextFile: File) => {
       const reader = readerRef.current
       if (!reader) return
 
-      setStatus('opening')
-      setErrorText('')
-      setToc([])
-      setProgressInfo(null)
-      setIsSeeking(false)
-      setSeekPercent(0)
-      setSearch((prev) => ({ ...prev, results: [], progressPercent: 0, searching: false }))
+      prepareOpen()
 
       try {
         await reader.open(nextFile)
@@ -249,7 +300,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
         onError?.(e)
       }
     },
-    [onError],
+    [onError, prepareOpen],
   )
 
   const runSearch = useCallback(
@@ -327,9 +378,30 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   }, [onError, onProgress, onReady])
 
   useEffect(() => {
-    if (!file) return
-    void handleOpenFile(file)
-  }, [file, handleOpenFile])
+    if (file) {
+      void handleOpenFile(file)
+      return
+    }
+
+    const nextUrl = fileUrl?.trim()
+    if (!nextUrl) return
+
+    const controller = new AbortController()
+    prepareOpen()
+    void (async () => {
+      try {
+        const downloaded = await downloadEpubAsFile(nextUrl, controller.signal)
+        await handleOpenFile(downloaded)
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return
+        setStatus('error')
+        setErrorText(e?.message ? String(e.message) : '下载失败')
+        onError?.(e)
+      }
+    })()
+
+    return () => controller.abort()
+  }, [file, fileUrl, handleOpenFile, onError, prepareOpen])
 
   useEffect(() => {
     readerRef.current?.setDarkMode(darkMode)

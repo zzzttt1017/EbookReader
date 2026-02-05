@@ -10,6 +10,7 @@ export type EBookReaderVueExposed = Pick<
 
 export type EBookReaderVueProps = {
   file?: File | null
+  fileUrl?: string | null
   defaultFontSize?: number
   fontSize?: number
   defaultDarkMode?: boolean
@@ -20,6 +21,7 @@ export type EBookReaderVueProps = {
 
 export const EBookReaderVuePropsDef = {
   file: { type: Object as PropType<File | null>, required: false },
+  fileUrl: { type: String, required: false },
   defaultFontSize: { type: Number, required: false, default: 100 },
   fontSize: { type: Number, required: false },
   defaultDarkMode: { type: Boolean, required: false, default: false },

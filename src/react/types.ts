@@ -18,6 +18,7 @@ export type EBookReaderReactHandle = Pick<
 
 export type EBookReaderReactProps = {
   file?: File | null
+  fileUrl?: string | null
   className?: string
   style?: CSSProperties
   defaultFontSize?: number

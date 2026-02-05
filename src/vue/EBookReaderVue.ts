@@ -16,6 +16,52 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 const mergeClassName = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(' ')
 
+const getFileNameFromContentDisposition = (contentDisposition: string | null) => {
+  if (!contentDisposition) return null
+  const starMatch = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+  if (starMatch?.[1]) {
+    try {
+      return decodeURIComponent(starMatch[1].replace(/^"|"$/g, ''))
+    } catch {
+      return starMatch[1].replace(/^"|"$/g, '')
+    }
+  }
+
+  const match = contentDisposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)
+  return match?.[1] ?? match?.[2] ?? null
+}
+
+const normalizeEpubFileName = (name: string) => {
+  const trimmed = name.trim()
+  if (!trimmed) return 'book.epub'
+  if (trimmed.toLowerCase().endsWith('.epub')) return trimmed
+  if (!trimmed.includes('.')) return `${trimmed}.epub`
+  return trimmed
+}
+
+const getFileNameFromUrl = (url: string) => {
+  try {
+    const u = new URL(url, window.location.href)
+    const last = u.pathname.split('/').filter(Boolean).pop()
+    return last ? decodeURIComponent(last) : null
+  } catch {
+    return null
+  }
+}
+
+const downloadEpubAsFile = async (url: string, signal: AbortSignal) => {
+  const res = await fetch(url, { signal })
+  if (!res.ok) throw new Error(`下载失败 (${res.status})`)
+  const blob = await res.blob()
+
+  const headerName = getFileNameFromContentDisposition(res.headers.get('content-disposition'))
+  const urlName = getFileNameFromUrl(url)
+  const fileName = normalizeEpubFileName(headerName ?? urlName ?? 'book.epub')
+  const type = blob.type || 'application/epub+zip'
+
+  return new File([blob], fileName, { type })
+}
+
 export const EBookReaderVue = defineComponent({
   name: 'EBookReaderVue',
   props: EBookReaderVuePropsDef,
@@ -105,6 +151,47 @@ export const EBookReaderVue = defineComponent({
       } catch (e: any) {
         status.value = 'error'
         errorText.value = e?.message ? String(e.message) : '打开失败'
+        emit('error', e)
+      }
+    }
+
+    let openController: AbortController | null = null
+
+    const openFromProps = async () => {
+      if (!reader.value) return
+
+      openController?.abort()
+      openController = null
+
+      if (props.file) {
+        await openFile(props.file)
+        return
+      }
+
+      const nextUrl = props.fileUrl?.trim()
+      if (!nextUrl) return
+
+      const controller = new AbortController()
+      openController = controller
+
+      status.value = 'opening'
+      errorText.value = ''
+      toc.value = []
+      progressInfo.value = null
+      isSeeking.value = false
+      seekPercent.value = 0
+      searchResults.value = []
+      searchProgressPercent.value = 0
+      searching.value = false
+
+      try {
+        const downloaded = await downloadEpubAsFile(nextUrl, controller.signal)
+        if (controller.signal.aborted) return
+        await openFile(downloaded)
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return
+        status.value = 'error'
+        errorText.value = e?.message ? String(e.message) : '下载失败'
         emit('error', e)
       }
     }
@@ -264,6 +351,8 @@ export const EBookReaderVue = defineComponent({
         return
       }
 
+      void openFromProps()
+
       const root = rootEl.value
       if (root) {
         root.addEventListener('keydown', keydownHandler)
@@ -283,6 +372,7 @@ export const EBookReaderVue = defineComponent({
     })
 
     onBeforeUnmount(() => {
+      openController?.abort()
       const root = rootEl.value
       if (root) {
         root.removeEventListener('keydown', keydownHandler)
@@ -297,10 +387,8 @@ export const EBookReaderVue = defineComponent({
     })
 
     watch(
-      () => props.file,
-      (next) => {
-        if (next) void openFile(next)
-      },
+      () => [props.file, props.fileUrl],
+      () => void openFromProps(),
     )
 
     watch(
