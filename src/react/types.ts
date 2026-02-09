@@ -9,7 +9,7 @@ export type SearchState = {
   results: SearchResult[]
 }
 
-export type MobilePanel = 'menu' | 'search' | 'progress' | 'theme' | 'font'
+export type MobilePanel = 'menu' | 'search' | 'progress' | 'settings'
 
 export type EBookReaderReactHandle = Pick<
   EBookReaderHandle,

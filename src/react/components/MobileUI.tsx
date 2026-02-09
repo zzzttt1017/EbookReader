@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { TocItem } from '../../core/types.js'
 import type { MobilePanel, SearchState } from '../types.js'
 import { TocTree } from './TocTree'
@@ -69,7 +69,68 @@ export const MobileUI = ({
   onToggleDarkMode,
   onFontSizeChange,
 }: MobileUIProps) => {
-  const mobileTitle = activePanel === 'menu' ? '目录' : activePanel === 'search' ? '搜索' : activePanel === 'progress' ? '进度' : activePanel === 'theme' ? '明暗' : activePanel === 'font' ? '字号' : ''
+  const mobileTitle = activePanel === 'menu' ? '目录' : activePanel === 'search' ? '搜索' : activePanel === 'progress' ? '进度' : activePanel === 'settings' ? '设置' : ''
+
+  const displayedFontSize = Math.min(40, Math.max(10, Math.round(fontSize / 5)))
+  const [fontSliderValue, setFontSliderValue] = useState(displayedFontSize)
+  const [isFontDragging, setIsFontDragging] = useState(false)
+  const fontDebounceRef = useRef<number | null>(null)
+  const fontPendingRef = useRef(displayedFontSize)
+  const fontSliderWrapRef = useRef<HTMLDivElement | null>(null)
+  const [fontSliderWidth, setFontSliderWidth] = useState(0)
+  const fontThumbSize = 34
+  const fontMin = 10
+  const fontMax = 40
+
+  useEffect(() => {
+    setFontSliderValue(displayedFontSize)
+    fontPendingRef.current = displayedFontSize
+  }, [displayedFontSize])
+
+  useEffect(() => {
+    return () => {
+      if (fontDebounceRef.current) {
+        clearTimeout(fontDebounceRef.current)
+        fontDebounceRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activePanel !== 'settings') return
+    const el = fontSliderWrapRef.current
+    if (!el) return
+    const update = () => setFontSliderWidth(el.getBoundingClientRect().width)
+    update()
+    const ro = new ResizeObserver(() => update())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [activePanel])
+
+  const fontProgressPercent = ((fontSliderValue - fontMin) / (fontMax - fontMin)) * 100
+  const fontThumbLeft = (() => {
+    if (!fontSliderWidth) return 0
+    const percent = (fontSliderValue - fontMin) / (fontMax - fontMin)
+    const half = fontThumbSize / 2
+    return Math.min(fontSliderWidth - half, Math.max(half, half + percent * (fontSliderWidth - fontThumbSize)))
+  })()
+
+  const flushFontSize = () => {
+    if (fontDebounceRef.current) {
+      clearTimeout(fontDebounceRef.current)
+      fontDebounceRef.current = null
+    }
+    onFontSizeChange(fontPendingRef.current * 5)
+  }
+
+  const scheduleFontSize = (next: number) => {
+    fontPendingRef.current = next
+    if (fontDebounceRef.current) clearTimeout(fontDebounceRef.current)
+    fontDebounceRef.current = window.setTimeout(() => {
+      fontDebounceRef.current = null
+      onFontSizeChange(fontPendingRef.current * 5)
+    }, 80)
+  }
 
   const [tooltip, setTooltip] = useState<{ text: string, left: number } | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -225,26 +286,14 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('theme')} 
-          aria-pressed={activePanel === 'theme'}
-          onTouchStart={(e) => handleTouchStart(e, '明暗')}
+          onClick={() => togglePanelSafe('settings')} 
+          aria-pressed={activePanel === 'settings'}
+          onTouchStart={(e) => handleTouchStart(e, '设置')}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-          title="明暗"
+          title="设置"
         >
-          <SvgIcon name="sun" />
-        </button>
-        <button 
-          type="button" 
-          className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('font')} 
-          aria-pressed={activePanel === 'font'}
-          onTouchStart={(e) => handleTouchStart(e, '字号')}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          title="字号"
-        >
-          <SvgIcon name="type" />
+          <SvgIcon name="settings" />
         </button>
       </div>
 
@@ -383,20 +432,57 @@ export const MobileUI = ({
             </>
           ) : null}
 
-          {activePanel === 'theme' ? (
-            <button type="button" className="epub-reader__btn" onClick={() => onToggleDarkMode(!darkMode)}>
-              {darkMode ? '切换到亮色' : '切换到暗黑'}
-            </button>
-          ) : null}
+          {activePanel === 'settings' ? (
+            <div className="epub-reader__msettings">
+              <div className="epub-reader__mfont-range">
+                <div className="epub-reader__mfont-a is-small">A</div>
+                <div ref={fontSliderWrapRef} className={`epub-reader__mfont-slider ${isFontDragging ? 'is-dragging' : ''}`}>
+                  <input
+                    className="epub-reader__range"
+                    type="range"
+                    min={fontMin}
+                    max={fontMax}
+                    step={1}
+                    value={fontSliderValue}
+                    onChange={(e) => {
+                      const next = Number(e.target.value)
+                      setFontSliderValue(next)
+                      scheduleFontSize(next)
+                    }}
+                    onPointerDown={() => setIsFontDragging(true)}
+                    onPointerUp={() => {
+                      setIsFontDragging(false)
+                      flushFontSize()
+                    }}
+                    onPointerCancel={() => {
+                      setIsFontDragging(false)
+                      flushFontSize()
+                    }}
+                    onKeyUp={(e) => {
+                      if (e.key !== 'Enter') return
+                      flushFontSize()
+                    }}
+                    style={{
+                      background: `linear-gradient(to right, var(--epub-reader-range-fill) 0%, var(--epub-reader-range-fill) ${fontProgressPercent}%, var(--epub-reader-range-track) ${fontProgressPercent}%, var(--epub-reader-range-track) 100%)`,
+                    }}
+                    aria-label="字号"
+                  />
+                  <div className="epub-reader__mfont-thumb" style={{ left: `${fontThumbLeft}px`, width: `${fontThumbSize}px`, height: `${fontThumbSize}px` }}>
+                    {fontSliderValue}
+                  </div>
+                </div>
+                <div className="epub-reader__mfont-a is-big">A</div>
+              </div>
 
-          {activePanel === 'font' ? (
-            <div className="epub-reader__mfont">
-              <button type="button" className="epub-reader__btn" onClick={() => onFontSizeChange(fontSize - 10)}>
-                A-
-              </button>
-              <div className="epub-reader__font">{fontSize}%</div>
-              <button type="button" className="epub-reader__btn" onClick={() => onFontSizeChange(fontSize + 10)}>
-                A+
+              <button
+                type="button"
+                className="epub-reader__btn"
+                onClick={() => onToggleDarkMode(!darkMode)}
+                aria-pressed={darkMode}
+                aria-label={darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'}
+                title={darkMode ? '切换到亮色' : '切换到暗黑'}
+              >
+                <SvgIcon name={darkMode ? 'sun' : 'moon'} />
               </button>
             </div>
           ) : null}

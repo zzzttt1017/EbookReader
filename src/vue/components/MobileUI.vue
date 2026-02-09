@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { TocItem, SearchOptions, SearchResult } from '../../core/types'
 import TocTree from './TocTree.vue'
 import SearchResultList from './SearchResultList.vue'
@@ -53,10 +53,91 @@ const mobileTitle = computed(() => {
     case 'menu': return '目录'
     case 'search': return '搜索'
     case 'progress': return '进度'
-    case 'theme': return '明暗'
-    case 'font': return '字号'
+    case 'settings': return '设置'
     default: return ''
   }
+})
+
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
+const displayedFontSize = computed(() => clamp(Math.round(props.fontSize / 5), 10, 40))
+
+const fontSliderValue = ref(displayedFontSize.value)
+const fontSliderWrapRef = ref<HTMLElement | null>(null)
+const fontSliderWidth = ref(0)
+const isFontDragging = ref(false)
+const fontThumbSize = 34
+const fontMin = 10
+const fontMax = 40
+let fontRo: ResizeObserver | null = null
+let fontDebounceTimer: number | null = null
+
+watch(displayedFontSize, (v) => {
+  fontSliderValue.value = v
+})
+
+const teardownFontResize = () => {
+  if (fontRo) {
+    fontRo.disconnect()
+    fontRo = null
+  }
+}
+
+const setupFontResize = async () => {
+  await nextTick()
+  const el = fontSliderWrapRef.value
+  if (!el) return
+  const update = () => {
+    fontSliderWidth.value = el.getBoundingClientRect().width
+  }
+  update()
+  teardownFontResize()
+  fontRo = new ResizeObserver(() => update())
+  fontRo.observe(el)
+}
+
+watch(
+  () => props.activePanel,
+  (p) => {
+    if (p === 'settings') void setupFontResize()
+    else teardownFontResize()
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => teardownFontResize())
+
+const fontProgressPercent = computed(() => ((fontSliderValue.value - fontMin) / (fontMax - fontMin)) * 100)
+const fontThumbLeft = computed(() => {
+  if (!fontSliderWidth.value) return 0
+  const percent = (fontSliderValue.value - fontMin) / (fontMax - fontMin)
+  const half = fontThumbSize / 2
+  return Math.min(fontSliderWidth.value - half, Math.max(half, half + percent * (fontSliderWidth.value - fontThumbSize)))
+})
+
+const flushFontSize = () => {
+  if (fontDebounceTimer) {
+    clearTimeout(fontDebounceTimer)
+    fontDebounceTimer = null
+  }
+  emit('changeFontSize', fontSliderValue.value * 5)
+}
+
+const scheduleFontSize = (next: number) => {
+  if (fontDebounceTimer) clearTimeout(fontDebounceTimer)
+  fontDebounceTimer = window.setTimeout(() => {
+    fontDebounceTimer = null
+    emit('changeFontSize', next * 5)
+  }, 80)
+}
+
+const handleFontSliderInput = (e: Event) => {
+  const next = Number((e.target as HTMLInputElement).value)
+  fontSliderValue.value = next
+  scheduleFontSize(next)
+}
+
+onBeforeUnmount(() => {
+  if (fontDebounceTimer) clearTimeout(fontDebounceTimer)
 })
 
 const updateSearchOption = (key: keyof SearchOptions, value: boolean) => {
@@ -219,26 +300,14 @@ const handleTouchEnd = () => {
       <button 
         type="button" 
         class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'theme'" 
-        @click="togglePanelSafe('theme')"
-        @touchstart="(e) => handleTouchStart(e, '明暗')"
+        :aria-pressed="activePanel === 'settings'" 
+        @click="togglePanelSafe('settings')"
+        @touchstart="(e) => handleTouchStart(e, '设置')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
-        title="明暗"
+        title="设置"
       >
-        <SvgIcon name="sun" />
-      </button>
-      <button 
-        type="button" 
-        class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'font'" 
-        @click="togglePanelSafe('font')"
-        @touchstart="(e) => handleTouchStart(e, '字号')"
-        @touchend="handleTouchEnd"
-        @touchcancel="handleTouchEnd"
-        title="字号"
-      >
-        <SvgIcon name="type" />
+        <SvgIcon name="settings" />
       </button>
     </div>
 
@@ -357,20 +426,43 @@ const handleTouchEnd = () => {
           </div>
         </template>
 
-        <template v-if="activePanel === 'theme'">
-          <button type="button" class="epub-reader__btn" @click="emit('toggleDarkMode', !darkMode)">
-            {{ darkMode ? '切换到亮色' : '切换到暗黑' }}
-          </button>
-        </template>
+        <template v-if="activePanel === 'settings'">
+          <div class="epub-reader__msettings">
+            <div class="epub-reader__mfont-range">
+              <div class="epub-reader__mfont-a is-small">A</div>
+              <div ref="fontSliderWrapRef" :class="['epub-reader__mfont-slider', { 'is-dragging': isFontDragging }]">
+                <input
+                  class="epub-reader__range"
+                  type="range"
+                  :min="fontMin"
+                  :max="fontMax"
+                  :step="1"
+                  :value="fontSliderValue"
+                  :style="{ background: `linear-gradient(to right, var(--epub-reader-range-fill) 0%, var(--epub-reader-range-fill) ${fontProgressPercent}%, var(--epub-reader-range-track) ${fontProgressPercent}%, var(--epub-reader-range-track) 100%)` }"
+                  aria-label="字号"
+                  @input="handleFontSliderInput"
+                  @pointerdown="isFontDragging = true"
+                  @pointerup="() => { isFontDragging = false; flushFontSize() }"
+                  @pointercancel="() => { isFontDragging = false; flushFontSize() }"
+                  @touchstart="isFontDragging = true"
+                  @touchend="() => { isFontDragging = false; flushFontSize() }"
+                />
+                <div class="epub-reader__mfont-thumb" :style="{ left: `${fontThumbLeft}px`, width: `${fontThumbSize}px`, height: `${fontThumbSize}px` }">
+                  {{ fontSliderValue }}
+                </div>
+              </div>
+              <div class="epub-reader__mfont-a is-big">A</div>
+            </div>
 
-        <template v-if="activePanel === 'font'">
-          <div class="epub-reader__mfont">
-            <button type="button" class="epub-reader__btn" @click="emit('changeFontSize', fontSize - 10)">
-              A-
-            </button>
-            <div class="epub-reader__font">{{ fontSize }}%</div>
-            <button type="button" class="epub-reader__btn" @click="emit('changeFontSize', fontSize + 10)">
-              A+
+            <button
+              type="button"
+              class="epub-reader__btn"
+              :aria-pressed="darkMode"
+              :aria-label="darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'"
+              :title="darkMode ? '切换到亮色' : '切换到暗黑'"
+              @click="emit('toggleDarkMode', !darkMode)"
+            >
+              <SvgIcon :name="darkMode ? 'sun' : 'moon'" />
             </button>
           </div>
         </template>

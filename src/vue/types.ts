@@ -1,7 +1,7 @@
 import type { PropType } from 'vue'
 import type { EBookReaderHandle, ProgressInfo, SearchOptions } from '../core/types.js'
 
-export type MobilePanel = 'menu' | 'search' | 'progress' | 'theme' | 'font'
+export type MobilePanel = 'menu' | 'search' | 'progress' | 'settings'
 
 export type EBookReaderVueExposed = Pick<
   EBookReaderHandle,
