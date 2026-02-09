@@ -274,7 +274,7 @@ export const MobileUI = ({
             <>
               <div className="epub-reader__meta">
                 <span className="epub-reader__status">
-                  {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪'}
+                  {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : ''}
                 </span>
                 {sectionLabel ? <span>{sectionLabel}</span> : null}
               </div>

@@ -18,7 +18,7 @@ const emit = defineEmits<{
   <div class="epub-reader__bottom">
     <div class="epub-reader__bottom-left">
       <span class="epub-reader__status">
-        {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪' }}
+        {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '' }}
       </span>
       <span v-if="sectionLabel" class="epub-reader__section">{{ sectionLabel }}</span>
     </div>

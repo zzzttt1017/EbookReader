@@ -254,7 +254,7 @@ const handleTouchEnd = () => {
         <template v-if="activePanel === 'progress'">
           <div class="epub-reader__meta">
             <span class="epub-reader__status">
-              {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪' }}
+              {{ status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '' }}
             </span>
             <span v-if="sectionLabel">{{ sectionLabel }}</span>
           </div>

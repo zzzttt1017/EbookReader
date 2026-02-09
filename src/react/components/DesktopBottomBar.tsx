@@ -26,7 +26,7 @@ export const DesktopBottomBar = ({
     <div className="epub-reader__bottom">
       <div className="epub-reader__bottom-left">
         <span className="epub-reader__status">
-          {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : '就绪'}
+          {status === 'error' ? errorText || '错误' : status === 'opening' ? '正在打开…' : ''}
         </span>
         {sectionLabel ? <span className="epub-reader__section">{sectionLabel}</span> : null}
       </div>
