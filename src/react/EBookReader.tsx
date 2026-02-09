@@ -75,6 +75,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     fileUrl,
     className,
     style,
+    mobileToolbarRight,
     defaultFontSize = 100,
     fontSize: controlledFontSize,
     onFontSizeChange,
@@ -504,6 +505,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
           activePanel={mobilePanel}
           onTogglePanel={toggleMobilePanel}
           onClosePanel={closeMobileSheet}
+          toolbarRight={mobileToolbarRight}
           toc={toc}
           search={search}
           status={status}

@@ -261,54 +261,60 @@ const handleTouchEnd = () => {
       >
         {{ tooltip.text }}
       </div>
-      <button 
-        type="button" 
-        class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'menu'" 
-        @click="togglePanelSafe('menu')"
-        @touchstart="(e) => handleTouchStart(e, '目录')"
-        @touchend="handleTouchEnd"
-        @touchcancel="handleTouchEnd"
-        title="目录"
-      >
-        <SvgIcon name="list" />
-      </button>
-      <button 
-        type="button" 
-        class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'search'" 
-        @click="togglePanelSafe('search')"
-        @touchstart="(e) => handleTouchStart(e, '搜索')"
-        @touchend="handleTouchEnd"
-        @touchcancel="handleTouchEnd"
-        title="搜索"
-      >
-        <SvgIcon name="search" />
-      </button>
-      <button 
-        type="button" 
-        class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'progress'" 
-        @click="togglePanelSafe('progress')"
-        @touchstart="(e) => handleTouchStart(e, '进度')"
-        @touchend="handleTouchEnd"
-        @touchcancel="handleTouchEnd"
-        title="进度"
-      >
-        <SvgIcon name="sliders" />
-      </button>
-      <button 
-        type="button" 
-        class="epub-reader__btn" 
-        :aria-pressed="activePanel === 'settings'" 
-        @click="togglePanelSafe('settings')"
-        @touchstart="(e) => handleTouchStart(e, '设置')"
-        @touchend="handleTouchEnd"
-        @touchcancel="handleTouchEnd"
-        title="设置"
-      >
-        <SvgIcon name="settings" />
-      </button>
+      <div class="epub-reader__mbar-left">
+        <button 
+          type="button" 
+          class="epub-reader__btn" 
+          :aria-pressed="activePanel === 'menu'" 
+          @click="togglePanelSafe('menu')"
+          @touchstart="(e) => handleTouchStart(e, '目录')"
+          @touchend="handleTouchEnd"
+          @touchcancel="handleTouchEnd"
+          title="目录"
+        >
+          <SvgIcon name="list" />
+        </button>
+        <button 
+          type="button" 
+          class="epub-reader__btn" 
+          :aria-pressed="activePanel === 'search'" 
+          @click="togglePanelSafe('search')"
+          @touchstart="(e) => handleTouchStart(e, '搜索')"
+          @touchend="handleTouchEnd"
+          @touchcancel="handleTouchEnd"
+          title="搜索"
+        >
+          <SvgIcon name="search" />
+        </button>
+        <button 
+          type="button" 
+          class="epub-reader__btn" 
+          :aria-pressed="activePanel === 'progress'" 
+          @click="togglePanelSafe('progress')"
+          @touchstart="(e) => handleTouchStart(e, '进度')"
+          @touchend="handleTouchEnd"
+          @touchcancel="handleTouchEnd"
+          title="进度"
+        >
+          <SvgIcon name="sliders" />
+        </button>
+        <button 
+          type="button" 
+          class="epub-reader__btn" 
+          :aria-pressed="activePanel === 'settings'" 
+          @click="togglePanelSafe('settings')"
+          @touchstart="(e) => handleTouchStart(e, '设置')"
+          @touchend="handleTouchEnd"
+          @touchcancel="handleTouchEnd"
+          title="设置"
+        >
+          <SvgIcon name="settings" />
+        </button>
+      </div>
+
+      <div v-if="$slots.toolbarRight" class="epub-reader__mbar-right">
+        <slot name="toolbarRight" />
+      </div>
     </div>
 
     <div v-if="activePanel" class="epub-reader__moverlay" @click="closePanelSafe" />

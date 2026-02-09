@@ -10,6 +10,7 @@ type MobileUIProps = {
   activePanel: MobilePanel | null
   onTogglePanel: (panel: MobilePanel) => void
   onClosePanel: () => void
+  toolbarRight?: React.ReactNode
   
   // Data props
   toc: TocItem[]
@@ -48,6 +49,7 @@ export const MobileUI = ({
   activePanel,
   onTogglePanel,
   onClosePanel,
+  toolbarRight,
   toc,
   search,
   status,
@@ -247,54 +249,58 @@ export const MobileUI = ({
             {tooltip.text}
           </div>
         )}
-        <button 
-          type="button" 
-          className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('menu')} 
-          aria-pressed={activePanel === 'menu'}
-          onTouchStart={(e) => handleTouchStart(e, '目录')}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          title="目录"
-        >
-          <SvgIcon name="list" />
-        </button>
-        <button 
-          type="button" 
-          className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('search')} 
-          aria-pressed={activePanel === 'search'}
-          onTouchStart={(e) => handleTouchStart(e, '搜索')}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          title="搜索"
-        >
-          <SvgIcon name="search" />
-        </button>
-        <button 
-          type="button" 
-          className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('progress')} 
-          aria-pressed={activePanel === 'progress'}
-          onTouchStart={(e) => handleTouchStart(e, '进度')}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          title="进度"
-        >
-          <SvgIcon name="sliders" />
-        </button>
-        <button 
-          type="button" 
-          className="epub-reader__btn" 
-          onClick={() => togglePanelSafe('settings')} 
-          aria-pressed={activePanel === 'settings'}
-          onTouchStart={(e) => handleTouchStart(e, '设置')}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          title="设置"
-        >
-          <SvgIcon name="settings" />
-        </button>
+        <div className="epub-reader__mbar-left">
+          <button 
+            type="button" 
+            className="epub-reader__btn" 
+            onClick={() => togglePanelSafe('menu')} 
+            aria-pressed={activePanel === 'menu'}
+            onTouchStart={(e) => handleTouchStart(e, '目录')}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            title="目录"
+          >
+            <SvgIcon name="list" />
+          </button>
+          <button 
+            type="button" 
+            className="epub-reader__btn" 
+            onClick={() => togglePanelSafe('search')} 
+            aria-pressed={activePanel === 'search'}
+            onTouchStart={(e) => handleTouchStart(e, '搜索')}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            title="搜索"
+          >
+            <SvgIcon name="search" />
+          </button>
+          <button 
+            type="button" 
+            className="epub-reader__btn" 
+            onClick={() => togglePanelSafe('progress')} 
+            aria-pressed={activePanel === 'progress'}
+            onTouchStart={(e) => handleTouchStart(e, '进度')}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            title="进度"
+          >
+            <SvgIcon name="sliders" />
+          </button>
+          <button 
+            type="button" 
+            className="epub-reader__btn" 
+            onClick={() => togglePanelSafe('settings')} 
+            aria-pressed={activePanel === 'settings'}
+            onTouchStart={(e) => handleTouchStart(e, '设置')}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            title="设置"
+          >
+            <SvgIcon name="settings" />
+          </button>
+        </div>
+
+        {toolbarRight ? <div className="epub-reader__mbar-right">{toolbarRight}</div> : null}
       </div>
 
       {activePanel ? <div className="epub-reader__moverlay" onClick={closePanelSafe} /> : null}

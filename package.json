@@ -46,6 +46,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsup && node scripts/copy-style.mjs",
     "dev:react": "pnpm -C playgrounds/react-demo dev",
     "dev:vue": "pnpm -C playgrounds/vue-demo dev",

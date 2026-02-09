@@ -66,7 +66,7 @@ export const EBookReaderVue = defineComponent({
   name: 'EBookReaderVue',
   props: EBookReaderVuePropsDef,
   emits: ['ready', 'error', 'progress', 'fontSizeChange', 'darkModeChange', 'update:fontSize', 'update:darkMode'],
-  setup(props, { emit, expose }) {
+  setup(props, { emit, expose, slots }) {
     const instance = getCurrentInstance()
     const isPropProvided = (key: string) => {
       const vnodeProps = instance?.vnode.props
@@ -497,6 +497,8 @@ export const EBookReaderVue = defineComponent({
               },
               onToggleDarkMode: setDarkModeInternal,
               onChangeFontSize: setFontSizeInternal,
+            }, {
+              toolbarRight: () => slots.mobileToolbarRight?.(),
             }),
           ]
         : [

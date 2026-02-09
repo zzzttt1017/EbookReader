@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { EBookReaderHandle, ProgressInfo, SearchOptions, SearchResult } from '../core/types.js'
 
 export type SearchState = {
@@ -21,6 +21,7 @@ export type EBookReaderReactProps = {
   fileUrl?: string | null
   className?: string
   style?: CSSProperties
+  mobileToolbarRight?: ReactNode
   defaultFontSize?: number
   fontSize?: number
   onFontSizeChange?: (fontSize: number) => void
