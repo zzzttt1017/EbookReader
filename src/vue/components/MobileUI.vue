@@ -66,6 +66,81 @@ const updateSearchOption = (key: keyof SearchOptions, value: boolean) => {
 const tooltip = ref<{ text: string, left: number } | null>(null)
 let timer: number | null = null
 
+const ignoreToggle = ref(false)
+
+const markIgnoreToggle = () => {
+  ignoreToggle.value = true
+  window.setTimeout(() => {
+    ignoreToggle.value = false
+  }, 350)
+}
+
+const clearTooltip = () => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  tooltip.value = null
+}
+
+const closePanelSafe = () => {
+  emit('closePanel')
+  clearTooltip()
+  const el = document.activeElement
+  if (el && el instanceof HTMLElement) el.blur()
+}
+
+const togglePanelSafe = (panel: MobilePanel) => {
+  if (ignoreToggle.value) return
+  emit('togglePanel', panel)
+}
+
+const sheetRef = ref<HTMLElement | null>(null)
+const dragRef = { startY: 0, currentY: 0, isDragging: false }
+
+const handleHeaderTouchStart = (e: TouchEvent) => {
+  clearTooltip()
+  dragRef.startY = e.touches[0].clientY
+  dragRef.isDragging = true
+  if (sheetRef.value) {
+    sheetRef.value.style.transition = 'none'
+  }
+}
+
+const handleHeaderTouchMove = (e: TouchEvent) => {
+  if (!dragRef.isDragging) return
+  e.preventDefault()
+  const deltaY = e.touches[0].clientY - dragRef.startY
+  if (deltaY > 0 && sheetRef.value) {
+    // 允许跟随手指下滑
+    sheetRef.value.style.transform = `translateY(${deltaY}px)`
+    dragRef.currentY = deltaY
+  }
+}
+
+const handleHeaderTouchEnd = () => {
+  if (!dragRef.isDragging) return
+  dragRef.isDragging = false
+  
+  if (sheetRef.value) {
+    sheetRef.value.style.transition = '' // 恢复 CSS 中的 transition
+    
+    // 如果下滑距离超过 80px，则关闭
+    if (dragRef.currentY > 80) {
+      markIgnoreToggle()
+      closePanelSafe()
+      // 稍微延迟清空 transform，避免闪烁
+      setTimeout(() => {
+        if (sheetRef.value) sheetRef.value.style.transform = ''
+      }, 300)
+    } else {
+      // 回弹
+      sheetRef.value.style.transform = ''
+    }
+  }
+  dragRef.currentY = 0
+}
+
 const handleTouchStart = (e: TouchEvent, text: string) => {
   const target = e.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
@@ -78,11 +153,7 @@ const handleTouchStart = (e: TouchEvent, text: string) => {
 }
 
 const handleTouchEnd = () => {
-  if (timer) {
-    clearTimeout(timer)
-    timer = null
-  }
-  tooltip.value = null
+  clearTooltip()
 }
 </script>
 
@@ -113,7 +184,7 @@ const handleTouchEnd = () => {
         type="button" 
         class="epub-reader__btn" 
         :aria-pressed="activePanel === 'menu'" 
-        @click="emit('togglePanel', 'menu')"
+        @click="togglePanelSafe('menu')"
         @touchstart="(e) => handleTouchStart(e, '目录')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
@@ -125,7 +196,7 @@ const handleTouchEnd = () => {
         type="button" 
         class="epub-reader__btn" 
         :aria-pressed="activePanel === 'search'" 
-        @click="emit('togglePanel', 'search')"
+        @click="togglePanelSafe('search')"
         @touchstart="(e) => handleTouchStart(e, '搜索')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
@@ -137,7 +208,7 @@ const handleTouchEnd = () => {
         type="button" 
         class="epub-reader__btn" 
         :aria-pressed="activePanel === 'progress'" 
-        @click="emit('togglePanel', 'progress')"
+        @click="togglePanelSafe('progress')"
         @touchstart="(e) => handleTouchStart(e, '进度')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
@@ -149,7 +220,7 @@ const handleTouchEnd = () => {
         type="button" 
         class="epub-reader__btn" 
         :aria-pressed="activePanel === 'theme'" 
-        @click="emit('togglePanel', 'theme')"
+        @click="togglePanelSafe('theme')"
         @touchstart="(e) => handleTouchStart(e, '明暗')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
@@ -161,7 +232,7 @@ const handleTouchEnd = () => {
         type="button" 
         class="epub-reader__btn" 
         :aria-pressed="activePanel === 'font'" 
-        @click="emit('togglePanel', 'font')"
+        @click="togglePanelSafe('font')"
         @touchstart="(e) => handleTouchStart(e, '字号')"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchEnd"
@@ -171,12 +242,21 @@ const handleTouchEnd = () => {
       </button>
     </div>
 
-    <div v-if="activePanel" class="epub-reader__moverlay" @click="emit('closePanel')" />
+    <div v-if="activePanel" class="epub-reader__moverlay" @click="closePanelSafe" />
 
-    <div :class="['epub-reader__msheet', { 'is-open': activePanel }]" :aria-hidden="!activePanel">
-      <div class="epub-reader__msheet-header">
+    <div 
+      ref="sheetRef"
+      :class="['epub-reader__msheet', { 'is-open': activePanel }]" 
+      :aria-hidden="!activePanel"
+    >
+      <div 
+        class="epub-reader__msheet-header"
+        @touchstart="handleHeaderTouchStart"
+        @touchmove="handleHeaderTouchMove"
+        @touchend="handleHeaderTouchEnd"
+      >
         <div class="epub-reader__msheet-title">{{ mobileTitle }}</div>
-        <button type="button" class="epub-reader__btn" @click="emit('closePanel')">
+        <button type="button" class="epub-reader__btn" @click="closePanelSafe">
           <SvgIcon name="x" />
         </button>
       </div>
@@ -187,7 +267,7 @@ const handleTouchEnd = () => {
             :items="toc"
             @select="(href) => {
               emit('tocSelect', href)
-              emit('closePanel')
+              closePanelSafe()
             }"
           />
           <div v-else class="epub-reader__empty">未找到目录</div>

@@ -73,6 +73,26 @@ export const MobileUI = ({
 
   const [tooltip, setTooltip] = useState<{ text: string, left: number } | null>(null)
   const timerRef = useRef<number | null>(null)
+  const ignoreToggleRef = useRef(false)
+
+  const markIgnoreToggle = () => {
+    ignoreToggleRef.current = true
+    window.setTimeout(() => {
+      ignoreToggleRef.current = false
+    }, 350)
+  }
+
+  const closePanelSafe = () => {
+    onClosePanel()
+    handleTouchEnd()
+    const el = document.activeElement
+    if (el && el instanceof HTMLElement) el.blur()
+  }
+
+  const togglePanelSafe = (panel: MobilePanel) => {
+    if (ignoreToggleRef.current) return
+    onTogglePanel(panel)
+  }
 
   const handleTouchStart = (e: React.TouchEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -91,6 +111,55 @@ export const MobileUI = ({
       timerRef.current = null
     }
     setTooltip(null)
+  }
+
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef({ startY: 0, currentY: 0, isDragging: false })
+
+  const handleHeaderTouchStart = (e: React.TouchEvent) => {
+    handleTouchEnd()
+    dragRef.current.startY = e.touches[0].clientY
+    dragRef.current.isDragging = true
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'none'
+    }
+  }
+
+  const handleHeaderTouchMove = (e: React.TouchEvent) => {
+    if (!dragRef.current.isDragging) return
+    e.preventDefault()
+    const deltaY = e.touches[0].clientY - dragRef.current.startY
+    if (deltaY > 0 && sheetRef.current) {
+      // 允许跟随手指下滑
+      sheetRef.current.style.transform = `translateY(${deltaY}px)`
+      dragRef.current.currentY = deltaY
+    }
+  }
+
+  const handleHeaderTouchEnd = () => {
+    if (!dragRef.current.isDragging) return
+    dragRef.current.isDragging = false
+    
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = '' // 恢复 CSS 中的 transition
+      
+      // 如果下滑距离超过 80px，则关闭
+      if (dragRef.current.currentY > 80) {
+        markIgnoreToggle()
+        closePanelSafe()
+        // 稍微延迟清空 transform，避免闪烁，等待 CSS 类移除动画接管（或者直接依赖 is-open 类移除）
+        // 这里 onClosePanel 会导致 activePanel 变 null，React 重新渲染，is-open 类移除
+        // 下次打开时，activePanel 变为非 null，is-open 类添加，且 style 为空（重新渲染重置）
+        // 但为了保险，手动重置一下 style，防止重新挂载前的动画问题
+        setTimeout(() => {
+          if (sheetRef.current) sheetRef.current.style.transform = ''
+        }, 300)
+      } else {
+        // 回弹
+        sheetRef.current.style.transform = ''
+      }
+    }
+    dragRef.current.currentY = 0
   }
 
   return (
@@ -120,7 +189,7 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => onTogglePanel('menu')} 
+          onClick={() => togglePanelSafe('menu')} 
           aria-pressed={activePanel === 'menu'}
           onTouchStart={(e) => handleTouchStart(e, '目录')}
           onTouchEnd={handleTouchEnd}
@@ -132,7 +201,7 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => onTogglePanel('search')} 
+          onClick={() => togglePanelSafe('search')} 
           aria-pressed={activePanel === 'search'}
           onTouchStart={(e) => handleTouchStart(e, '搜索')}
           onTouchEnd={handleTouchEnd}
@@ -144,7 +213,7 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => onTogglePanel('progress')} 
+          onClick={() => togglePanelSafe('progress')} 
           aria-pressed={activePanel === 'progress'}
           onTouchStart={(e) => handleTouchStart(e, '进度')}
           onTouchEnd={handleTouchEnd}
@@ -156,7 +225,7 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => onTogglePanel('theme')} 
+          onClick={() => togglePanelSafe('theme')} 
           aria-pressed={activePanel === 'theme'}
           onTouchStart={(e) => handleTouchStart(e, '明暗')}
           onTouchEnd={handleTouchEnd}
@@ -168,7 +237,7 @@ export const MobileUI = ({
         <button 
           type="button" 
           className="epub-reader__btn" 
-          onClick={() => onTogglePanel('font')} 
+          onClick={() => togglePanelSafe('font')} 
           aria-pressed={activePanel === 'font'}
           onTouchStart={(e) => handleTouchStart(e, '字号')}
           onTouchEnd={handleTouchEnd}
@@ -179,12 +248,21 @@ export const MobileUI = ({
         </button>
       </div>
 
-      {activePanel ? <div className="epub-reader__moverlay" onClick={onClosePanel} /> : null}
+      {activePanel ? <div className="epub-reader__moverlay" onClick={closePanelSafe} /> : null}
 
-      <div className={`epub-reader__msheet ${activePanel ? 'is-open' : ''}`} aria-hidden={!activePanel}>
-        <div className="epub-reader__msheet-header">
+      <div 
+        ref={sheetRef}
+        className={`epub-reader__msheet ${activePanel ? 'is-open' : ''}`} 
+        aria-hidden={!activePanel}
+      >
+        <div 
+          className="epub-reader__msheet-header"
+          onTouchStart={handleHeaderTouchStart}
+          onTouchMove={handleHeaderTouchMove}
+          onTouchEnd={handleHeaderTouchEnd}
+        >
           <div className="epub-reader__msheet-title">{mobileTitle}</div>
-          <button type="button" className="epub-reader__btn" onClick={onClosePanel}>
+          <button type="button" className="epub-reader__btn" onClick={closePanelSafe}>
             <SvgIcon name="x" />
           </button>
         </div>
@@ -195,7 +273,7 @@ export const MobileUI = ({
                 items={toc}
                 onSelect={(href) => {
                   onTocSelect(href)
-                  onClosePanel()
+                  closePanelSafe()
                 }}
               />
             ) : (
