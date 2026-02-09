@@ -1,6 +1,6 @@
 {
   "name": "@somecat/epub-reader",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A cross-framework EPUB ebook reader component library based on foliate-js",
   "license": "MIT",
   "author": "SomeCat <zt@somecat.cn>",
