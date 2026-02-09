@@ -86,6 +86,7 @@ export const EBookReaderVue = defineComponent({
 
     const progressInfo = ref<ProgressInfo | null>(null)
     const isSeeking = ref(false)
+    const isDragging = ref(false)
     const seekPercent = ref(0)
 
     const layout = ref<'mobile' | 'default' | 'wide'>('default')
@@ -335,6 +336,9 @@ export const EBookReaderVue = defineComponent({
           onError: (e) => emit('error', e),
           onProgress: (info) => {
             progressInfo.value = info
+            if (!isDragging.value) {
+              isSeeking.value = false
+            }
             emit('progress', info)
           },
           onToc: (items) => (toc.value = items),
@@ -463,14 +467,17 @@ export const EBookReaderVue = defineComponent({
               onSearchResultSelect: (cfi: string) => {
                 if (cfi) reader.value?.goTo(cfi)
               },
-              onSeekStart: () => (isSeeking.value = true),
+              onSeekStart: () => {
+                isSeeking.value = true
+                isDragging.value = true
+              },
               onSeekChange: (v: number) => (seekPercent.value = v),
               onSeekEnd: (v: number) => {
-                isSeeking.value = false
+                isDragging.value = false
                 reader.value?.goToFraction(v / 100)
               },
               onSeekCommit: (v: number) => {
-                isSeeking.value = false
+                isDragging.value = false
                 reader.value?.goToFraction(v / 100)
               },
               onToggleDarkMode: setDarkModeInternal,
@@ -522,14 +529,17 @@ export const EBookReaderVue = defineComponent({
               errorText: errorText.value,
               sectionLabel: sectionLabel,
               displayedPercent: displayed,
-              onSeekStart: () => (isSeeking.value = true),
+              onSeekStart: () => {
+                isSeeking.value = true
+                isDragging.value = true
+              },
               onSeekChange: (v: number) => (seekPercent.value = v),
               onSeekEnd: (v: number) => {
-                isSeeking.value = false
+                isDragging.value = false
                 reader.value?.goToFraction(v / 100)
               },
               onSeekCommit: (v: number) => {
-                isSeeking.value = false
+                isDragging.value = false
                 reader.value?.goToFraction(v / 100)
               },
             }),

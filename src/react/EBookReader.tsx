@@ -122,6 +122,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const layoutRef = useRef(layout)
   const boundDocsRef = useRef(new WeakSet<Document>())
   const gestureRef = useRef({ startX: 0, startY: 0, startAt: 0, tracking: false, moved: false, actionTaken: false })
+  const isDraggingRef = useRef(false)
 
   const percentage = useMemo(() => Math.round((progressInfo?.fraction ?? 0) * 100), [progressInfo])
   const displayedPercent = isSeeking ? seekPercent : percentage
@@ -346,6 +347,9 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
         onError: (e) => onError?.(e),
         onProgress: (info) => {
           setProgressInfo(info)
+          if (!isDraggingRef.current) {
+            setIsSeeking(false)
+          }
           onProgress?.(info)
         },
         onToc: (items) => setToc(items),
@@ -446,10 +450,13 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   )
 
   // 子组件回调 Helpers
-  const handleSeekStart = useCallback(() => setIsSeeking(true), [])
+  const handleSeekStart = useCallback(() => {
+    setIsSeeking(true)
+    isDraggingRef.current = true
+  }, [])
   const handleSeekChange = useCallback((v: number) => setSeekPercent(v), [])
   const handleSeekEnd = useCallback((v: number) => {
-    setIsSeeking(false)
+    isDraggingRef.current = false
     readerRef.current?.goToFraction(v / 100)
   }, [])
 
