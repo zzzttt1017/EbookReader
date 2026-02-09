@@ -101,6 +101,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null)
   const [isSeeking, setIsSeeking] = useState(false)
   const [seekPercent, setSeekPercent] = useState(0)
+  const [downloadLoading, setDownloadLoading] = useState<null | 'download' | 'open'>(null)
 
   const [uncontrolledFontSize, setUncontrolledFontSize] = useState(defaultFontSize)
   const [uncontrolledDarkMode, setUncontrolledDarkMode] = useState(defaultDarkMode)
@@ -392,19 +393,29 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
     const controller = new AbortController()
     prepareOpen()
+    setDownloadLoading('download')
+    let active = true
     void (async () => {
       try {
         const downloaded = await downloadEpubAsFile(nextUrl, controller.signal)
+        if (!active) return
+        setDownloadLoading('open')
         await handleOpenFile(downloaded)
       } catch (e: any) {
         if (e?.name === 'AbortError') return
         setStatus('error')
         setErrorText(e?.message ? String(e.message) : '下载失败')
         onError?.(e)
+      } finally {
+        if (active) setDownloadLoading(null)
       }
     })()
 
-    return () => controller.abort()
+    return () => {
+      active = false
+      setDownloadLoading(null)
+      controller.abort()
+    }
   }, [file, fileUrl, handleOpenFile, onError, prepareOpen])
 
   useEffect(() => {
@@ -476,8 +487,16 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
       data-theme={darkMode ? 'dark' : 'light'}
       data-layout={layout}
       tabIndex={0}
+      aria-busy={downloadLoading != null}
     >
       <div className="epub-reader__viewer" ref={viewerHostRef} />
+
+      {downloadLoading ? (
+        <div className="epub-reader__loading" role="status" aria-live="polite">
+          <div className="epub-reader__spinner" aria-hidden="true" />
+          <div className="epub-reader__loading-text">{downloadLoading === 'download' ? '加载中…' : '渲染中…'}</div>
+        </div>
+      ) : null}
 
       {layout === 'mobile' ? (
         <MobileUI

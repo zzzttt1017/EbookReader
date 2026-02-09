@@ -80,6 +80,7 @@ export const EBookReaderVue = defineComponent({
 
     const status = ref<'idle' | 'ready' | 'opening' | 'error'>('idle')
     const errorText = ref('')
+    const downloadLoading = ref<null | 'download' | 'open'>(null)
     const toc = ref<TocItem[]>([])
     const tocOpen = ref(false)
     const searchOpen = ref(false)
@@ -163,6 +164,7 @@ export const EBookReaderVue = defineComponent({
 
       openController?.abort()
       openController = null
+      downloadLoading.value = null
 
       if (props.file) {
         await openFile(props.file)
@@ -174,6 +176,7 @@ export const EBookReaderVue = defineComponent({
 
       const controller = new AbortController()
       openController = controller
+      downloadLoading.value = 'download'
 
       status.value = 'opening'
       errorText.value = ''
@@ -188,12 +191,16 @@ export const EBookReaderVue = defineComponent({
       try {
         const downloaded = await downloadEpubAsFile(nextUrl, controller.signal)
         if (controller.signal.aborted) return
+        if (openController !== controller) return
+        downloadLoading.value = 'open'
         await openFile(downloaded)
       } catch (e: any) {
         if (e?.name === 'AbortError') return
         status.value = 'error'
         errorText.value = e?.message ? String(e.message) : '下载失败'
         emit('error', e)
+      } finally {
+        if (openController === controller) downloadLoading.value = null
       }
     }
 
@@ -377,6 +384,7 @@ export const EBookReaderVue = defineComponent({
 
     onBeforeUnmount(() => {
       openController?.abort()
+      downloadLoading.value = null
       const root = rootEl.value
       if (root) {
         root.removeEventListener('keydown', keydownHandler)
@@ -435,10 +443,17 @@ export const EBookReaderVue = defineComponent({
       const isMobile = layout.value === 'mobile'
 
       const viewer = h('div', { class: 'epub-reader__viewer', ref: viewerHost })
+      const loading = downloadLoading.value
+        ? h('div', { class: 'epub-reader__loading', role: 'status', 'aria-live': 'polite' }, [
+            h('div', { class: 'epub-reader__spinner', 'aria-hidden': 'true' }),
+            h('div', { class: 'epub-reader__loading-text' }, downloadLoading.value === 'download' ? '下载中…' : '加载中…'),
+          ])
+        : null
 
       const children = isMobile
         ? [
             viewer,
+            loading,
             h(MobileUI, {
               barVisible: mobileBarVisible.value,
               activePanel: mobilePanel.value,
@@ -486,6 +501,7 @@ export const EBookReaderVue = defineComponent({
           ]
         : [
             viewer,
+            loading,
             h(DesktopToolbar, {
               darkMode: darkMode(),
               fontSize: fontSize(),
@@ -552,6 +568,7 @@ export const EBookReaderVue = defineComponent({
           class: 'epub-reader',
           'data-theme': darkMode() ? 'dark' : 'light',
           'data-layout': layout.value,
+          'aria-busy': downloadLoading.value != null,
           tabindex: 0,
         },
         children,

@@ -167,6 +167,44 @@
   z-index: 20;
 }
 
+.epub-reader__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--epub-reader-panel-bg) 65%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.epub-reader__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--epub-reader-range-track);
+  border-top-color: var(--epub-reader-accent);
+  animation: epub-reader-spin 0.9s linear infinite;
+}
+
+.epub-reader__loading-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--epub-reader-panel-fg);
+  letter-spacing: 0.2px;
+}
+
+@keyframes epub-reader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .epub-reader__drawer {
   position: absolute;
   top: 0;
