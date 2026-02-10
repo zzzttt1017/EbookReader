@@ -304,7 +304,7 @@ const handleTouchEnd = () => {
         @touchcancel="handleTouchEnd"
         title="进度"
       >
-        <SvgIcon name="sliders" />
+        <SvgIcon name="progress" />
       </button>
       <button 
         type="button" 
@@ -367,7 +367,7 @@ const handleTouchEnd = () => {
               }"
               @keydown.enter="emit('search', searchQuery)"
             />
-            <button type="button" class="epub-reader__btn" :disabled="status !== 'ready'" @click="emit('search', searchQuery)">
+            <button type="button" class="epub-reader__btn epub-reader__btn--wide" :disabled="status !== 'ready'" @click="emit('search', searchQuery)">
               搜索
             </button>
           </div>
@@ -418,6 +418,25 @@ const handleTouchEnd = () => {
             </span>
             <span v-if="sectionLabel">{{ sectionLabel }}</span>
           </div>
+          <div class="epub-reader__mprogress">
+            <input
+              class="epub-reader__range"
+              type="range"
+              :min="0"
+              :max="100"
+              :step="1"
+              :value="displayedPercent"
+              :style="{ background: `linear-gradient(to right, var(--epub-reader-range-fill) 0%, var(--epub-reader-range-fill) ${displayedPercent}%, var(--epub-reader-range-track) ${displayedPercent}%, var(--epub-reader-range-track) 100%)` }"
+              @input="(e: any) => {
+                emit('seekStart')
+                emit('seekChange', Number(e.target.value))
+              }"
+              @pointerup="(e: any) => emit('seekEnd', Number(e.target.value))"
+              @keyup.enter="(e: any) => emit('seekCommit', Number(e.target.value))"
+            />
+            <div class="epub-reader__mprogress-percent">{{ displayedPercent }}%</div>
+          </div>
+
           <div class="epub-reader__mnav">
             <button type="button" class="epub-reader__btn" title="上一章" @click="emit('prevSection')">
               <SvgIcon name="chevrons-left" />
@@ -431,23 +450,6 @@ const handleTouchEnd = () => {
             <button type="button" class="epub-reader__btn" title="下一章" @click="emit('nextSection')">
               <SvgIcon name="chevrons-right" />
             </button>
-          </div>
-          <div class="epub-reader__mprogress">
-            <input
-              class="epub-reader__range"
-              type="range"
-              :min="0"
-              :max="100"
-              :step="1"
-              :value="displayedPercent"
-              @input="(e: any) => {
-                emit('seekStart')
-                emit('seekChange', Number(e.target.value))
-              }"
-              @pointerup="(e: any) => emit('seekEnd', Number(e.target.value))"
-              @keyup.enter="(e: any) => emit('seekCommit', Number(e.target.value))"
-            />
-            <div class="epub-reader__mprogress-percent">{{ displayedPercent }}%</div>
           </div>
         </template>
 
@@ -479,50 +481,52 @@ const handleTouchEnd = () => {
               <div class="epub-reader__mfont-a is-big">A</div>
             </div>
 
-            <div class="epub-reader__msetting">
-              <div class="epub-reader__msetting-head">
-                <div class="epub-reader__msetting-label">行高</div>
-                <div class="epub-reader__msetting-value">{{ props.lineHeight.toFixed(2) }}</div>
+            <div class="epub-reader__msettings-row">
+              <div class="epub-reader__msetting">
+                <div class="epub-reader__msetting-head">
+                  <div class="epub-reader__msetting-label">行高</div>
+                  <div class="epub-reader__msetting-value">{{ props.lineHeight.toFixed(2) }}</div>
+                </div>
+                <input
+                  class="epub-reader__range"
+                  type="range"
+                  :min="1"
+                  :max="3"
+                  :step="0.05"
+                  :value="props.lineHeight"
+                  aria-label="行高"
+                  @input="(e: any) => emit('changeLineHeight', Number(e.target.value))"
+                />
               </div>
-              <input
-                class="epub-reader__range"
-                type="range"
-                :min="1"
-                :max="3"
-                :step="0.05"
-                :value="props.lineHeight"
-                aria-label="行高"
-                @input="(e: any) => emit('changeLineHeight', Number(e.target.value))"
-              />
-            </div>
 
-            <div class="epub-reader__msetting">
-              <div class="epub-reader__msetting-head">
-                <div class="epub-reader__msetting-label">字间距</div>
-                <div class="epub-reader__msetting-value">{{ props.letterSpacing.toFixed(2) }}em</div>
+              <div class="epub-reader__msetting">
+                <div class="epub-reader__msetting-head">
+                  <div class="epub-reader__msetting-label">字间距</div>
+                  <div class="epub-reader__msetting-value">{{ props.letterSpacing.toFixed(2) }}em</div>
+                </div>
+                <input
+                  class="epub-reader__range"
+                  type="range"
+                  :min="0"
+                  :max="0.3"
+                  :step="0.01"
+                  :value="props.letterSpacing"
+                  aria-label="字间距"
+                  @input="(e: any) => emit('changeLetterSpacing', Number(e.target.value))"
+                />
               </div>
-              <input
-                class="epub-reader__range"
-                type="range"
-                :min="0"
-                :max="0.3"
-                :step="0.01"
-                :value="props.letterSpacing"
-                aria-label="字间距"
-                @input="(e: any) => emit('changeLetterSpacing', Number(e.target.value))"
-              />
-            </div>
 
-            <button
-              type="button"
-              class="epub-reader__btn"
-              :aria-pressed="darkMode"
-              :aria-label="darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'"
-              :title="darkMode ? '切换到亮色' : '切换到暗黑'"
-              @click="emit('toggleDarkMode', !darkMode)"
-            >
-              <SvgIcon :name="darkMode ? 'sun' : 'moon'" />
-            </button>
+              <button
+                type="button"
+                class="epub-reader__btn"
+                :aria-pressed="darkMode"
+                :aria-label="darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'"
+                :title="darkMode ? '切换到亮色' : '切换到暗黑'"
+                @click="emit('toggleDarkMode', !darkMode)"
+              >
+                <SvgIcon :name="darkMode ? 'sun' : 'moon'" />
+              </button>
+            </div>
           </div>
         </template>
       </div>

@@ -299,7 +299,7 @@ export const MobileUI = ({
           onTouchCancel={handleTouchEnd}
           title="进度"
         >
-          <SvgIcon name="sliders" />
+          <SvgIcon name="progress" />
         </button>
         <button 
           type="button" 
@@ -367,7 +367,7 @@ export const MobileUI = ({
                     if (e.key === 'Enter') onSearch(search.query)
                   }}
                 />
-                <button type="button" className="epub-reader__btn" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
+                <button type="button" className="epub-reader__btn epub-reader__btn--wide" onClick={() => onSearch(search.query)} disabled={status !== 'ready'}>
                   搜索
                 </button>
               </div>
@@ -425,6 +425,34 @@ export const MobileUI = ({
                 </span>
                 {sectionLabel ? <span>{sectionLabel}</span> : null}
               </div>
+              <div className="epub-reader__mprogress">
+                <input
+                  className="epub-reader__range"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={displayedPercent}
+                  style={{
+                    background: `linear-gradient(to right, var(--epub-reader-range-fill) 0%, var(--epub-reader-range-fill) ${displayedPercent}%, var(--epub-reader-range-track) ${displayedPercent}%, var(--epub-reader-range-track) 100%)`,
+                  }}
+                  onChange={(e) => {
+                    onSeekStart()
+                    onSeekChange(Number(e.target.value))
+                  }}
+                  onPointerUp={(e) => {
+                    const v = Number((e.target as HTMLInputElement).value)
+                    onSeekEnd(v)
+                  }}
+                  onKeyUp={(e) => {
+                    if (e.key !== 'Enter') return
+                    const v = Number((e.target as HTMLInputElement).value)
+                    onSeekCommit(v)
+                  }}
+                />
+                <div className="epub-reader__mprogress-percent">{displayedPercent}%</div>
+              </div>
+
               <div className="epub-reader__mnav">
                 <button
                   type="button"
@@ -471,30 +499,6 @@ export const MobileUI = ({
                   <SvgIcon name="chevrons-right" />
                 </button>
               </div>
-              <div className="epub-reader__mprogress">
-                <input
-                  className="epub-reader__range"
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={displayedPercent}
-                  onChange={(e) => {
-                    onSeekStart()
-                    onSeekChange(Number(e.target.value))
-                  }}
-                  onPointerUp={(e) => {
-                    const v = Number((e.target as HTMLInputElement).value)
-                    onSeekEnd(v)
-                  }}
-                  onKeyUp={(e) => {
-                    if (e.key !== 'Enter') return
-                    const v = Number((e.target as HTMLInputElement).value)
-                    onSeekCommit(v)
-                  }}
-                />
-                <div className="epub-reader__mprogress-percent">{displayedPercent}%</div>
-              </div>
             </>
           ) : null}
 
@@ -540,50 +544,52 @@ export const MobileUI = ({
                 <div className="epub-reader__mfont-a is-big">A</div>
               </div>
 
-              <div className="epub-reader__msetting">
-                <div className="epub-reader__msetting-head">
-                  <div className="epub-reader__msetting-label">行高</div>
-                  <div className="epub-reader__msetting-value">{lineHeight.toFixed(2)}</div>
+              <div className="epub-reader__msettings-row">
+                <div className="epub-reader__msetting">
+                  <div className="epub-reader__msetting-head">
+                    <div className="epub-reader__msetting-label">行高</div>
+                    <div className="epub-reader__msetting-value">{lineHeight.toFixed(2)}</div>
+                  </div>
+                  <input
+                    className="epub-reader__range"
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.05}
+                    value={lineHeight}
+                    aria-label="行高"
+                    onChange={(e) => onLineHeightChange(Number(e.target.value))}
+                  />
                 </div>
-                <input
-                  className="epub-reader__range"
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.05}
-                  value={lineHeight}
-                  aria-label="行高"
-                  onChange={(e) => onLineHeightChange(Number(e.target.value))}
-                />
-              </div>
 
-              <div className="epub-reader__msetting">
-                <div className="epub-reader__msetting-head">
-                  <div className="epub-reader__msetting-label">字间距</div>
-                  <div className="epub-reader__msetting-value">{letterSpacing.toFixed(2)}em</div>
+                <div className="epub-reader__msetting">
+                  <div className="epub-reader__msetting-head">
+                    <div className="epub-reader__msetting-label">字间距</div>
+                    <div className="epub-reader__msetting-value">{letterSpacing.toFixed(2)}em</div>
+                  </div>
+                  <input
+                    className="epub-reader__range"
+                    type="range"
+                    min={0}
+                    max={0.3}
+                    step={0.01}
+                    value={letterSpacing}
+                    aria-label="字间距"
+                    onChange={(e) => onLetterSpacingChange(Number(e.target.value))}
+                  />
                 </div>
-                <input
-                  className="epub-reader__range"
-                  type="range"
-                  min={0}
-                  max={0.3}
-                  step={0.01}
-                  value={letterSpacing}
-                  aria-label="字间距"
-                  onChange={(e) => onLetterSpacingChange(Number(e.target.value))}
-                />
-              </div>
 
-              <button
-                type="button"
-                className="epub-reader__btn"
-                onClick={() => onToggleDarkMode(!darkMode)}
-                aria-pressed={darkMode}
-                aria-label={darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'}
-                title={darkMode ? '切换到亮色' : '切换到暗黑'}
-              >
-                <SvgIcon name={darkMode ? 'sun' : 'moon'} />
-              </button>
+                <button
+                  type="button"
+                  className="epub-reader__btn"
+                  onClick={() => onToggleDarkMode(!darkMode)}
+                  aria-pressed={darkMode}
+                  aria-label={darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'}
+                  title={darkMode ? '切换到亮色' : '切换到暗黑'}
+                >
+                  <SvgIcon name={darkMode ? 'sun' : 'moon'} />
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
