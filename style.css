@@ -802,12 +802,14 @@
 }
 
 .epub-reader__msettings-row > .epub-reader__btn {
-  flex: 1 1 0;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   min-width: 44px;
   padding: 0;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.04);
-  aspect-ratio: 1 / 1;
+  align-self: center;
 }
 
 .epub-reader[data-theme='dark'] .epub-reader__msettings-row > .epub-reader__btn {

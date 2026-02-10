@@ -20,33 +20,53 @@ type FoliateViewElement = HTMLElement & {
   clearSearch?: () => void
 }
 
-const getContentCSS = (fontSize: number, isDark: boolean, lineHeight: number, letterSpacing: number, extraCSS?: string) => `
+const getContentCSS = (fontSize: number, isDark: boolean, lineHeight: number, letterSpacing: number, extraCSS?: string) => {
+  const scale = fontSize / 100
+
+  return `
 @namespace epub "http://www.idpf.org/2007/ops";
-html {
+:root:root {
   color-scheme: ${isDark ? 'dark' : 'light'} !important;
 }
-body {
+:root:root body {
   background-color: transparent !important;
   color: ${isDark ? '#e0e0e0' : 'black'} !important;
   font-size: ${fontSize}% !important;
   line-height: ${lineHeight} !important;
   letter-spacing: ${letterSpacing}em !important;
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
 }
-p {
+
+:root:root body :is(p, li, blockquote) {
   line-height: inherit !important;
+}
+
+:root:root body p {
   margin-bottom: 1em;
 }
-a {
+
+:root:root body a {
   color: ${isDark ? '#64b5f6' : '#2563eb'} !important;
 }
-img {
+
+:root:root body img {
   max-width: 100%;
   height: auto;
   object-fit: contain;
   ${isDark ? 'filter: brightness(0.8) contrast(1.2);' : ''}
 }
+
+@supports (zoom: 1) {
+  :root:root body[data-epub-reader-force-zoom='true'] {
+    zoom: ${scale};
+    font-size: 100% !important;
+  }
+}
+
 ${extraCSS ?? ''}
 `
+}
 
 export function createEBookReader(container: HTMLElement, options: EBookReaderOptions = {}): EBookReaderHandle {
   if (!container) throw new Error('container is required')
@@ -73,6 +93,8 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
   let lineHeight = initialLineHeight
   let letterSpacing = initialLetterSpacing
   let searchToken = 0
+  let activeDoc: Document | null = null
+  let forceZoomEnabled = false
 
   container.innerHTML = ''
 
@@ -83,22 +105,68 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
   viewer.setAttribute('margin', '48')
   viewer.setAttribute('gap', '0.07')
 
-  const applyStyles = () => {
+  const pickSampleEl = (doc: Document) => {
+    const candidates = doc.querySelectorAll('p, li, blockquote, span, div')
+    for (const el of candidates) {
+      const text = el.textContent?.trim()
+      if (!text) continue
+      if (text.length < 24) continue
+      return el as HTMLElement
+    }
+    return doc.body
+  }
+
+  const readFontSizePx = (doc: Document) => {
+    const el = pickSampleEl(doc)
+    if (!el) return null
+    const px = Number.parseFloat(getComputedStyle(el).fontSize)
+    return Number.isFinite(px) ? px : null
+  }
+
+  const applyForceZoomIfNeeded = () => {
+    if (!forceZoomEnabled) return
+    if (!activeDoc?.body) return
+    activeDoc.body.setAttribute('data-epub-reader-force-zoom', 'true')
+  }
+
+  const applyStyles = (check?: { beforePx: number | null; beforeFontSize: number; afterFontSize: number }) => {
     if (destroyed) return
     if (!viewer.renderer?.setStyles) return
+
+    applyForceZoomIfNeeded()
+
     viewer.renderer.setStyles(getContentCSS(fontSize, darkMode, lineHeight, letterSpacing, extraContentCSS))
     requestAnimationFrame(() => {
       setTimeout(() => {
         if (destroyed) return
         viewer.renderer?.render?.()
         viewer.renderer?.expand?.()
+
+        if (!check) return
+        if (forceZoomEnabled) return
+        if (!activeDoc) return
+
+        const { beforePx, beforeFontSize, afterFontSize } = check
+        const afterPx = readFontSizePx(activeDoc)
+        if (beforePx == null || afterPx == null) return
+
+        const isMeaningfulChange = Math.abs(afterFontSize - beforeFontSize) >= 10
+        const isIneffective = Math.abs(afterPx - beforePx) < 0.5
+        if (isMeaningfulChange && isIneffective) {
+          forceZoomEnabled = true
+          applyForceZoomIfNeeded()
+          viewer.renderer?.setStyles?.(getContentCSS(fontSize, darkMode, lineHeight, letterSpacing, extraContentCSS))
+          viewer.renderer?.render?.()
+          viewer.renderer?.expand?.()
+        }
       }, 50)
     })
   }
 
   const handleLoad = (e: Event) => {
-    applyStyles()
     const detail = (e as CustomEvent).detail as { doc?: Document } | undefined
+    activeDoc = detail?.doc ?? null
+    applyStyles()
     if (detail?.doc) onContentLoad?.(detail.doc)
   }
 
@@ -120,6 +188,8 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
       try {
         viewer.clearSearch?.()
         searchToken++
+        activeDoc = null
+        forceZoomEnabled = false
 
         await viewer.open?.(file)
 
@@ -168,8 +238,10 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
     },
     setFontSize(nextFontSize) {
       const safe = Math.min(300, Math.max(50, nextFontSize))
+      const beforeFontSize = fontSize
+      const beforePx = activeDoc && !forceZoomEnabled ? readFontSizePx(activeDoc) : null
       fontSize = safe
-      applyStyles()
+      applyStyles({ beforePx, beforeFontSize, afterFontSize: safe })
     },
     setLineHeight(nextLineHeight) {
       const safe = Math.min(3, Math.max(1, nextLineHeight))
