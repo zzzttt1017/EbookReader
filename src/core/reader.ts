@@ -20,7 +20,7 @@ type FoliateViewElement = HTMLElement & {
   clearSearch?: () => void
 }
 
-const getContentCSS = (fontSize: number, isDark: boolean, extraCSS?: string) => `
+const getContentCSS = (fontSize: number, isDark: boolean, lineHeight: number, letterSpacing: number, extraCSS?: string) => `
 @namespace epub "http://www.idpf.org/2007/ops";
 html {
   color-scheme: ${isDark ? 'dark' : 'light'} !important;
@@ -29,9 +29,11 @@ body {
   background-color: transparent !important;
   color: ${isDark ? '#e0e0e0' : 'black'} !important;
   font-size: ${fontSize}% !important;
+  line-height: ${lineHeight} !important;
+  letter-spacing: ${letterSpacing}em !important;
 }
 p {
-  line-height: 1.6;
+  line-height: inherit !important;
   margin-bottom: 1em;
 }
 a {
@@ -53,6 +55,8 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
   const {
     darkMode: initialDarkMode = false,
     fontSize: initialFontSize = 100,
+    lineHeight: initialLineHeight = 1.6,
+    letterSpacing: initialLetterSpacing = 0,
     extraContentCSS,
     onReady,
     onError,
@@ -66,6 +70,8 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
   let toc: TocItem[] = []
   let fontSize = initialFontSize
   let darkMode = initialDarkMode
+  let lineHeight = initialLineHeight
+  let letterSpacing = initialLetterSpacing
   let searchToken = 0
 
   container.innerHTML = ''
@@ -80,7 +86,7 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
   const applyStyles = () => {
     if (destroyed) return
     if (!viewer.renderer?.setStyles) return
-    viewer.renderer.setStyles(getContentCSS(fontSize, darkMode, extraContentCSS))
+    viewer.renderer.setStyles(getContentCSS(fontSize, darkMode, lineHeight, letterSpacing, extraContentCSS))
     requestAnimationFrame(() => {
       setTimeout(() => {
         if (destroyed) return
@@ -163,6 +169,16 @@ export function createEBookReader(container: HTMLElement, options: EBookReaderOp
     setFontSize(nextFontSize) {
       const safe = Math.min(300, Math.max(50, nextFontSize))
       fontSize = safe
+      applyStyles()
+    },
+    setLineHeight(nextLineHeight) {
+      const safe = Math.min(3, Math.max(1, nextLineHeight))
+      lineHeight = safe
+      applyStyles()
+    },
+    setLetterSpacing(nextLetterSpacing) {
+      const safe = Math.min(0.3, Math.max(0, nextLetterSpacing))
+      letterSpacing = safe
       applyStyles()
     },
     async search(query, opts: SearchOptions = {}) {

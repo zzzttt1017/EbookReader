@@ -21,10 +21,17 @@ export type EBookReaderReactProps = {
   fileUrl?: string | null
   className?: string
   style?: CSSProperties
+  themeColor?: string
   mobileToolbarRight?: ReactNode
   defaultFontSize?: number
   fontSize?: number
   onFontSizeChange?: (fontSize: number) => void
+  defaultLineHeight?: number
+  lineHeight?: number
+  onLineHeightChange?: (lineHeight: number) => void
+  defaultLetterSpacing?: number
+  letterSpacing?: number
+  onLetterSpacingChange?: (letterSpacing: number) => void
   defaultDarkMode?: boolean
   darkMode?: boolean
   onDarkModeChange?: (darkMode: boolean) => void

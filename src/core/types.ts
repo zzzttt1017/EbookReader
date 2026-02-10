@@ -33,6 +33,8 @@ export type SearchOptions = {
 export type EBookReaderOptions = {
   darkMode?: boolean
   fontSize?: number
+  lineHeight?: number
+  letterSpacing?: number
   extraContentCSS?: string
   onReady?: (handle: EBookReaderHandle) => void
   onError?: (error: unknown) => void
@@ -53,6 +55,8 @@ export type EBookReaderHandle = {
   goToFraction: (fraction: number) => void
   setDarkMode: (darkMode: boolean) => void
   setFontSize: (fontSize: number) => void
+  setLineHeight: (lineHeight: number) => void
+  setLetterSpacing: (letterSpacing: number) => void
   search: (query: string, options?: SearchOptions) => Promise<SearchResult[]>
   cancelSearch: () => void
   clearSearch: () => void

@@ -2,10 +2,6 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { createEBookReader } from '../core/reader.js'
 import type { ProgressInfo, TocItem } from '../core/types.js'
 import type { EBookReaderReactHandle, EBookReaderReactProps, SearchState, MobilePanel } from './types.js'
-import { DesktopToolbar } from './components/DesktopToolbar'
-import { DesktopBottomBar } from './components/DesktopBottomBar'
-import { TocDrawer } from './components/TocDrawer'
-import { SearchDrawer } from './components/SearchDrawer'
 import { MobileUI } from './components/MobileUI'
 
 const MOBILE_MAX_WIDTH = 768
@@ -75,10 +71,17 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     fileUrl,
     className,
     style,
+    themeColor,
     mobileToolbarRight,
     defaultFontSize = 100,
     fontSize: controlledFontSize,
     onFontSizeChange,
+    defaultLineHeight = 1.6,
+    lineHeight: controlledLineHeight,
+    onLineHeightChange,
+    defaultLetterSpacing = 0,
+    letterSpacing: controlledLetterSpacing,
+    onLetterSpacingChange,
     defaultDarkMode = false,
     darkMode: controlledDarkMode,
     onDarkModeChange,
@@ -97,8 +100,6 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const [status, setStatus] = useState<'idle' | 'ready' | 'opening' | 'error'>('idle')
   const [errorText, setErrorText] = useState<string>('')
   const [toc, setToc] = useState<TocItem[]>([])
-  const [tocOpen, setTocOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
   const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null)
   const [isSeeking, setIsSeeking] = useState(false)
   const [seekPercent, setSeekPercent] = useState(0)
@@ -106,9 +107,13 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
   const [uncontrolledFontSize, setUncontrolledFontSize] = useState(defaultFontSize)
   const [uncontrolledDarkMode, setUncontrolledDarkMode] = useState(defaultDarkMode)
+  const [uncontrolledLineHeight, setUncontrolledLineHeight] = useState(defaultLineHeight)
+  const [uncontrolledLetterSpacing, setUncontrolledLetterSpacing] = useState(defaultLetterSpacing)
 
   const fontSize = controlledFontSize ?? uncontrolledFontSize
   const darkMode = controlledDarkMode ?? uncontrolledDarkMode
+  const lineHeight = controlledLineHeight ?? uncontrolledLineHeight
+  const letterSpacing = controlledLetterSpacing ?? uncontrolledLetterSpacing
 
   const [search, setSearch] = useState<SearchState>({
     query: '',
@@ -124,6 +129,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const layoutRef = useRef(layout)
   const boundDocsRef = useRef(new WeakSet<Document>())
   const gestureRef = useRef({ startX: 0, startY: 0, startAt: 0, tracking: false, moved: false, actionTaken: false })
+  const pcDragRef = useRef({ startX: 0, startY: 0, tracking: false, actionTaken: false })
   const isDraggingRef = useRef(false)
 
   const percentage = useMemo(() => Math.round((progressInfo?.fraction ?? 0) * 100), [progressInfo])
@@ -162,11 +168,21 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   }, [])
 
   const onPointerDown = useCallback((e: PointerEvent) => {
-    if (layoutRef.current !== 'mobile') return
     const t = e.target as HTMLElement | null
     if (!t) return
     if (t.closest('.epub-reader__mbar') || t.closest('.epub-reader__msheet')) return
     if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
+
+    if (layoutRef.current !== 'mobile') {
+      if (e.pointerType !== 'mouse') return
+      if ((e.buttons & 1) !== 1) return
+      pcDragRef.current.tracking = true
+      pcDragRef.current.actionTaken = false
+      pcDragRef.current.startX = e.screenX
+      pcDragRef.current.startY = e.screenY
+      return
+    }
+
     gestureRef.current.tracking = true
     gestureRef.current.moved = false
     gestureRef.current.actionTaken = false
@@ -176,6 +192,30 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   }, [])
 
   const onPointerMove = useCallback((e: PointerEvent) => {
+    if (layoutRef.current !== 'mobile') {
+      if (!pcDragRef.current.tracking) return
+      if (e.pointerType !== 'mouse' || (e.buttons & 1) !== 1) {
+        pcDragRef.current.tracking = false
+        return
+      }
+
+      const dx = e.screenX - pcDragRef.current.startX
+      const dy = e.screenY - pcDragRef.current.startY
+
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 16) {
+        pcDragRef.current.tracking = false
+        return
+      }
+
+      if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy)) {
+        pcDragRef.current.actionTaken = true
+        pcDragRef.current.tracking = false
+        if (dx > 0) readerRef.current?.prevPage()
+        else readerRef.current?.nextPage()
+      }
+      return
+    }
+
     if (!gestureRef.current.tracking) return
     const dx = e.screenX - gestureRef.current.startX
     const dy = e.screenY - gestureRef.current.startY
@@ -204,7 +244,8 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
   const onPointerEnd = useCallback((e: PointerEvent) => {
     if (layoutRef.current !== 'mobile') {
-      gestureRef.current.tracking = false
+      pcDragRef.current.tracking = false
+      pcDragRef.current.actionTaken = false
       return
     }
 
@@ -272,9 +313,28 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     [controlledFontSize, onFontSizeChange],
   )
 
-  const closeDrawers = useCallback(() => {
-    setTocOpen(false)
-    setSearchOpen(false)
+  const setLineHeightInternal = useCallback(
+    (next: number) => {
+      const safe = clamp(next, 1, 3)
+      if (controlledLineHeight == null) setUncontrolledLineHeight(safe)
+      onLineHeightChange?.(safe)
+      readerRef.current?.setLineHeight(safe)
+    },
+    [controlledLineHeight, onLineHeightChange],
+  )
+
+  const setLetterSpacingInternal = useCallback(
+    (next: number) => {
+      const safe = clamp(next, 0, 0.3)
+      if (controlledLetterSpacing == null) setUncontrolledLetterSpacing(safe)
+      onLetterSpacingChange?.(safe)
+      readerRef.current?.setLetterSpacing(safe)
+    },
+    [controlledLetterSpacing, onLetterSpacingChange],
+  )
+
+  const closePanels = useCallback(() => {
+    setMobilePanel(null)
   }, [])
 
   const prepareOpen = useCallback(() => {
@@ -345,6 +405,8 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
       const reader = createEBookReader(host, {
         darkMode,
         fontSize,
+        lineHeight,
+        letterSpacing,
         onReady: (h) => onReady?.(h),
         onError: (e) => onError?.(e),
         onProgress: (info) => {
@@ -427,6 +489,14 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     readerRef.current?.setFontSize(fontSize)
   }, [fontSize])
 
+  useEffect(() => {
+    readerRef.current?.setLineHeight(lineHeight)
+  }, [lineHeight])
+
+  useEffect(() => {
+    readerRef.current?.setLetterSpacing(letterSpacing)
+  }, [letterSpacing])
+
   // 键盘导航
   useEffect(() => {
     if (!enableKeyboardNav) return
@@ -436,14 +506,14 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') readerRef.current?.prevPage()
       if (e.key === 'ArrowRight') readerRef.current?.nextPage()
-      if (e.key === 'Escape') closeDrawers()
+      if (e.key === 'Escape') closePanels()
     }
 
     root.addEventListener('keydown', handleKeyDown)
     return () => {
       root.removeEventListener('keydown', handleKeyDown)
     }
-  }, [closeDrawers, enableKeyboardNav])
+  }, [closePanels, enableKeyboardNav])
 
   useImperativeHandle(
     ref,
@@ -480,11 +550,19 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     if (cfi) readerRef.current?.goTo(cfi)
   }, [])
 
+  const rootStyle = useMemo(() => {
+    if (!themeColor) return style
+    return {
+      ...style,
+      ['--epub-reader-accent' as any]: themeColor,
+    }
+  }, [style, themeColor])
+
   return (
     <div
       ref={rootRef}
       className={mergeClassName('epub-reader', className)}
-      style={style}
+      style={rootStyle}
       data-theme={darkMode ? 'dark' : 'light'}
       data-layout={layout}
       tabIndex={0}
@@ -499,82 +577,41 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
         </div>
       ) : null}
 
-      {layout === 'mobile' ? (
-        <MobileUI
-          barVisible={mobileBarVisible}
-          activePanel={mobilePanel}
-          onTogglePanel={toggleMobilePanel}
-          onClosePanel={closeMobileSheet}
-          toolbarRight={mobileToolbarRight}
-          toc={toc}
-          search={search}
-          status={status}
-          errorText={errorText}
-          sectionLabel={sectionLabel}
-          displayedPercent={displayedPercent}
-          darkMode={darkMode}
-          fontSize={fontSize}
-          onTocSelect={handleTocSelect}
-          onSearch={(q) => void runSearch(q)}
-          onSearchQueryChange={(v) => setSearch((prev) => ({ ...prev, query: v }))}
-          onSearchOptionChange={(opt) => setSearch((prev) => ({ ...prev, options: { ...prev.options, ...opt } }))}
-          onCancelSearch={() => readerRef.current?.cancelSearch()}
-          onSearchResultSelect={handleSearchResultSelect}
-          onSeekStart={handleSeekStart}
-          onSeekChange={handleSeekChange}
-          onSeekEnd={handleSeekEnd}
-          onSeekCommit={handleSeekEnd}
-          onToggleDarkMode={setDarkModeInternal}
-          onFontSizeChange={setFontSizeInternal}
-        />
-      ) : (
-        <>
-          <DesktopToolbar
-            onToggleToc={() => setTocOpen(true)}
-            onToggleSearch={() => setSearchOpen(true)}
-            onPrevSection={() => readerRef.current?.prevSection()}
-            onPrevPage={() => readerRef.current?.prevPage()}
-            onNextPage={() => readerRef.current?.nextPage()}
-            onNextSection={() => readerRef.current?.nextSection()}
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkModeInternal(!darkMode)}
-            fontSize={fontSize}
-            onFontSizeChange={setFontSizeInternal}
-          />
-
-          {(tocOpen || searchOpen) && <div className="epub-reader__overlay" onClick={closeDrawers} />}
-
-          <TocDrawer
-            isOpen={tocOpen}
-            onClose={() => setTocOpen(false)}
-            toc={toc}
-            onSelect={handleTocSelect}
-          />
-
-          <SearchDrawer
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-            status={status}
-            search={search}
-            onSearch={(q) => void runSearch(q)}
-            onQueryChange={(v) => setSearch((prev) => ({ ...prev, query: v }))}
-            onOptionChange={(opt) => setSearch((prev) => ({ ...prev, options: { ...prev.options, ...opt } }))}
-            onCancelSearch={() => readerRef.current?.cancelSearch()}
-            onResultSelect={handleSearchResultSelect}
-          />
-
-          <DesktopBottomBar
-            status={status}
-            errorText={errorText}
-            sectionLabel={sectionLabel}
-            displayedPercent={displayedPercent}
-            onSeekStart={handleSeekStart}
-            onSeekChange={handleSeekChange}
-            onSeekEnd={handleSeekEnd}
-            onSeekCommit={handleSeekEnd}
-          />
-        </>
-      )}
+      <MobileUI
+        barVisible={layout === 'mobile' ? mobileBarVisible : true}
+        activePanel={mobilePanel}
+        onTogglePanel={toggleMobilePanel}
+        onClosePanel={closeMobileSheet}
+        toolbarRight={mobileToolbarRight}
+        onPrevSection={() => readerRef.current?.prevSection()}
+        onPrevPage={() => readerRef.current?.prevPage()}
+        onNextPage={() => readerRef.current?.nextPage()}
+        onNextSection={() => readerRef.current?.nextSection()}
+        toc={toc}
+        search={search}
+        status={status}
+        errorText={errorText}
+        sectionLabel={sectionLabel}
+        displayedPercent={displayedPercent}
+        darkMode={darkMode}
+        fontSize={fontSize}
+        lineHeight={lineHeight}
+        letterSpacing={letterSpacing}
+        onTocSelect={handleTocSelect}
+        onSearch={(q) => void runSearch(q)}
+        onSearchQueryChange={(v) => setSearch((prev) => ({ ...prev, query: v }))}
+        onSearchOptionChange={(opt) => setSearch((prev) => ({ ...prev, options: { ...prev.options, ...opt } }))}
+        onCancelSearch={() => readerRef.current?.cancelSearch()}
+        onSearchResultSelect={handleSearchResultSelect}
+        onSeekStart={handleSeekStart}
+        onSeekChange={handleSeekChange}
+        onSeekEnd={handleSeekEnd}
+        onSeekCommit={handleSeekEnd}
+        onToggleDarkMode={setDarkModeInternal}
+        onFontSizeChange={setFontSizeInternal}
+        onLineHeightChange={setLineHeightInternal}
+        onLetterSpacingChange={setLetterSpacingInternal}
+      />
     </div>
   )
 })

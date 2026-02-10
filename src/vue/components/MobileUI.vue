@@ -18,6 +18,8 @@ const props = defineProps<{
   displayedPercent: number
   darkMode: boolean
   fontSize: number
+  lineHeight: number
+  letterSpacing: number
   
   // Search Data
   searchQuery: string
@@ -43,9 +45,16 @@ const emit = defineEmits<{
   (e: 'seekChange', val: number): void
   (e: 'seekEnd', val: number): void
   (e: 'seekCommit', val: number): void
+
+  (e: 'prevSection'): void
+  (e: 'prevPage'): void
+  (e: 'nextPage'): void
+  (e: 'nextSection'): void
   
   (e: 'toggleDarkMode', val: boolean): void
   (e: 'changeFontSize', val: number): void
+  (e: 'changeLineHeight', val: number): void
+  (e: 'changeLetterSpacing', val: number): void
 }>()
 
 const mobileTitle = computed(() => {
@@ -409,6 +418,20 @@ const handleTouchEnd = () => {
             </span>
             <span v-if="sectionLabel">{{ sectionLabel }}</span>
           </div>
+          <div class="epub-reader__mnav">
+            <button type="button" class="epub-reader__btn" title="上一章" @click="emit('prevSection')">
+              <SvgIcon name="chevrons-left" />
+            </button>
+            <button type="button" class="epub-reader__btn" title="上一页" @click="emit('prevPage')">
+              <SvgIcon name="chevron-left" />
+            </button>
+            <button type="button" class="epub-reader__btn" title="下一页" @click="emit('nextPage')">
+              <SvgIcon name="chevron-right" />
+            </button>
+            <button type="button" class="epub-reader__btn" title="下一章" @click="emit('nextSection')">
+              <SvgIcon name="chevrons-right" />
+            </button>
+          </div>
           <div class="epub-reader__mprogress">
             <input
               class="epub-reader__range"
@@ -454,6 +477,40 @@ const handleTouchEnd = () => {
                 </div>
               </div>
               <div class="epub-reader__mfont-a is-big">A</div>
+            </div>
+
+            <div class="epub-reader__msetting">
+              <div class="epub-reader__msetting-head">
+                <div class="epub-reader__msetting-label">行高</div>
+                <div class="epub-reader__msetting-value">{{ props.lineHeight.toFixed(2) }}</div>
+              </div>
+              <input
+                class="epub-reader__range"
+                type="range"
+                :min="1"
+                :max="3"
+                :step="0.05"
+                :value="props.lineHeight"
+                aria-label="行高"
+                @input="(e: any) => emit('changeLineHeight', Number(e.target.value))"
+              />
+            </div>
+
+            <div class="epub-reader__msetting">
+              <div class="epub-reader__msetting-head">
+                <div class="epub-reader__msetting-label">字间距</div>
+                <div class="epub-reader__msetting-value">{{ props.letterSpacing.toFixed(2) }}em</div>
+              </div>
+              <input
+                class="epub-reader__range"
+                type="range"
+                :min="0"
+                :max="0.3"
+                :step="0.01"
+                :value="props.letterSpacing"
+                aria-label="字间距"
+                @input="(e: any) => emit('changeLetterSpacing', Number(e.target.value))"
+              />
             </div>
 
             <button

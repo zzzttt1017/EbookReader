@@ -3,10 +3,6 @@ import { createEBookReader } from '../core/reader.js'
 import type { ProgressInfo, SearchOptions, SearchResult, TocItem } from '../core/types.js'
 import { EBookReaderVuePropsDef } from './types.js'
 import type { EBookReaderVueEmits, EBookReaderVueExposed, MobilePanel } from './types.js'
-import DesktopToolbar from './components/DesktopToolbar.vue'
-import DesktopBottomBar from './components/DesktopBottomBar.vue'
-import TocDrawer from './components/TocDrawer.vue'
-import SearchDrawer from './components/SearchDrawer.vue'
 import MobileUI from './components/MobileUI.vue'
 
 const MOBILE_MAX_WIDTH = 768
@@ -65,7 +61,19 @@ const downloadEpubAsFile = async (url: string, signal: AbortSignal) => {
 export const EBookReaderVue = defineComponent({
   name: 'EBookReaderVue',
   props: EBookReaderVuePropsDef,
-  emits: ['ready', 'error', 'progress', 'fontSizeChange', 'darkModeChange', 'update:fontSize', 'update:darkMode'],
+  emits: [
+    'ready',
+    'error',
+    'progress',
+    'fontSizeChange',
+    'lineHeightChange',
+    'letterSpacingChange',
+    'darkModeChange',
+    'update:fontSize',
+    'update:lineHeight',
+    'update:letterSpacing',
+    'update:darkMode',
+  ],
   setup(props, { emit, expose, slots }) {
     const instance = getCurrentInstance()
     const isPropProvided = (key: string) => {
@@ -82,8 +90,6 @@ export const EBookReaderVue = defineComponent({
     const errorText = ref('')
     const downloadLoading = ref<null | 'download' | 'open'>(null)
     const toc = ref<TocItem[]>([])
-    const tocOpen = ref(false)
-    const searchOpen = ref(false)
 
     const progressInfo = ref<ProgressInfo | null>(null)
     const isSeeking = ref(false)
@@ -96,20 +102,19 @@ export const EBookReaderVue = defineComponent({
 
     const uncontrolledFontSize = ref(props.defaultFontSize ?? 100)
     const uncontrolledDarkMode = ref(Boolean(props.defaultDarkMode))
+    const uncontrolledLineHeight = ref(props.defaultLineHeight ?? 1.6)
+    const uncontrolledLetterSpacing = ref(props.defaultLetterSpacing ?? 0)
 
     const fontSize = () => (props.fontSize ?? uncontrolledFontSize.value)
     const darkMode = () => (isPropProvided('darkMode') ? Boolean(props.darkMode) : uncontrolledDarkMode.value)
+    const lineHeight = () => (isPropProvided('lineHeight') ? Number(props.lineHeight) : uncontrolledLineHeight.value)
+    const letterSpacing = () => (isPropProvided('letterSpacing') ? Number(props.letterSpacing) : uncontrolledLetterSpacing.value)
 
     const searchQuery = ref('')
     const searchOptions = ref<SearchOptions>(props.defaultSearchOptions ?? { matchCase: false, wholeWords: false, matchDiacritics: false })
     const searchProgressPercent = ref(0)
     const searching = ref(false)
     const searchResults = ref<SearchResult[]>([])
-
-    const closeDrawers = () => {
-      tocOpen.value = false
-      searchOpen.value = false
-    }
 
     const closeMobileSheet = () => {
       mobilePanel.value = null
@@ -133,6 +138,22 @@ export const EBookReaderVue = defineComponent({
       emit('update:fontSize', safe)
       emit('fontSizeChange', safe)
       reader.value?.setFontSize(safe)
+    }
+
+    const setLineHeightInternal = (next: number) => {
+      const safe = clamp(next, 1, 3)
+      if (!isPropProvided('lineHeight')) uncontrolledLineHeight.value = safe
+      emit('update:lineHeight', safe)
+      emit('lineHeightChange', safe)
+      reader.value?.setLineHeight(safe)
+    }
+
+    const setLetterSpacingInternal = (next: number) => {
+      const safe = clamp(next, 0, 0.3)
+      if (!isPropProvided('letterSpacing')) uncontrolledLetterSpacing.value = safe
+      emit('update:letterSpacing', safe)
+      emit('letterSpacingChange', safe)
+      reader.value?.setLetterSpacing(safe)
     }
 
     const openFile = async (nextFile: File) => {
@@ -234,7 +255,7 @@ export const EBookReaderVue = defineComponent({
       if (!props.enableKeyboardNav) return
       if (e.key === 'ArrowLeft') reader.value?.prevPage()
       if (e.key === 'ArrowRight') reader.value?.nextPage()
-      if (e.key === 'Escape') closeDrawers()
+      if (e.key === 'Escape') closeMobileSheet()
     }
 
     let gestureStartX = 0
@@ -243,14 +264,26 @@ export const EBookReaderVue = defineComponent({
     let gestureMoved = false
     let gestureActionTaken = false
     let gestureStartAt = 0
+    let pcDragStartX = 0
+    let pcDragStartY = 0
+    let pcDragTracking = false
     const boundDocs = new WeakSet<Document>()
 
     const pointerDownHandler = (e: PointerEvent) => {
-      if (layout.value !== 'mobile') return
       const t = e.target as HTMLElement | null
       if (!t) return
       if (t.closest('.epub-reader__mbar') || t.closest('.epub-reader__msheet')) return
       if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
+
+      if (layout.value !== 'mobile') {
+        if (e.pointerType !== 'mouse') return
+        if ((e.buttons & 1) !== 1) return
+        pcDragTracking = true
+        pcDragStartX = e.screenX
+        pcDragStartY = e.screenY
+        return
+      }
+
       gestureTracking = true
       gestureMoved = false
       gestureActionTaken = false
@@ -260,6 +293,29 @@ export const EBookReaderVue = defineComponent({
     }
 
     const pointerMoveHandler = (e: PointerEvent) => {
+      if (layout.value !== 'mobile') {
+        if (!pcDragTracking) return
+        if (e.pointerType !== 'mouse' || (e.buttons & 1) !== 1) {
+          pcDragTracking = false
+          return
+        }
+
+        const dx = e.screenX - pcDragStartX
+        const dy = e.screenY - pcDragStartY
+
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 16) {
+          pcDragTracking = false
+          return
+        }
+
+        if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy)) {
+          pcDragTracking = false
+          if (dx > 0) reader.value?.prevPage()
+          else reader.value?.nextPage()
+        }
+        return
+      }
+
       if (!gestureTracking) return
       const dx = e.screenX - gestureStartX
       const dy = e.screenY - gestureStartY
@@ -288,6 +344,7 @@ export const EBookReaderVue = defineComponent({
 
     const pointerEndHandler = (e: PointerEvent) => {
       if (layout.value !== 'mobile') {
+        pcDragTracking = false
         gestureTracking = false
         return
       }
@@ -339,6 +396,8 @@ export const EBookReaderVue = defineComponent({
         reader.value = createEBookReader(host, {
           darkMode: darkMode(),
           fontSize: fontSize(),
+          lineHeight: lineHeight(),
+          letterSpacing: letterSpacing(),
           onReady: (h) => emit('ready', h),
           onError: (e) => emit('error', e),
           onProgress: (info) => {
@@ -414,9 +473,18 @@ export const EBookReaderVue = defineComponent({
     )
 
     watch(
+      () => lineHeight(),
+      (v) => reader.value?.setLineHeight(Number(v)),
+    )
+
+    watch(
+      () => letterSpacing(),
+      (v) => reader.value?.setLetterSpacing(Number(v)),
+    )
+
+    watch(
       () => layout.value,
       (v) => {
-        closeDrawers()
         if (v !== 'mobile') {
           mobilePanel.value = null
           mobileBarVisible.value = false
@@ -440,8 +508,6 @@ export const EBookReaderVue = defineComponent({
       const pct = Math.round((progressInfo.value?.fraction ?? 0) * 100)
       const displayed = isSeeking.value ? seekPercent.value : pct
       const sectionLabel = progressInfo.value?.tocItem?.label ?? ''
-      const isMobile = layout.value === 'mobile'
-
       const viewer = h('div', { class: 'epub-reader__viewer', ref: viewerHost })
       const loading = downloadLoading.value
         ? h('div', { class: 'epub-reader__loading', role: 'status', 'aria-live': 'polite' }, [
@@ -450,124 +516,72 @@ export const EBookReaderVue = defineComponent({
           ])
         : null
 
-      const children = isMobile
-        ? [
-            viewer,
-            loading,
-            h(MobileUI, {
-              barVisible: mobileBarVisible.value,
-              activePanel: mobilePanel.value,
-              toc: toc.value,
-              status: status.value,
-              errorText: errorText.value,
-              sectionLabel: sectionLabel,
-              displayedPercent: displayed,
-              darkMode: darkMode(),
-              fontSize: fontSize(),
-              searchQuery: searchQuery.value,
-              searchOptions: searchOptions.value,
-              searchProgressPercent: searchProgressPercent.value,
-              searching: searching.value,
-              searchResults: searchResults.value,
-              
-              onTogglePanel: toggleMobilePanel,
-              onClosePanel: closeMobileSheet,
-              onTocSelect: (href: string | undefined) => {
-                if (href) reader.value?.goTo(href)
-              },
-              onSearch: (q: string) => void runSearch(q),
-              'onUpdate:searchQuery': (v: string) => (searchQuery.value = v),
-              'onUpdate:searchOptions': (v: Partial<SearchOptions>) => (searchOptions.value = { ...searchOptions.value, ...v }),
-              onCancelSearch: () => reader.value?.cancelSearch(),
-              onSearchResultSelect: (cfi: string) => {
-                if (cfi) reader.value?.goTo(cfi)
-              },
-              onSeekStart: () => {
-                isSeeking.value = true
-                isDragging.value = true
-              },
-              onSeekChange: (v: number) => (seekPercent.value = v),
-              onSeekEnd: (v: number) => {
-                isDragging.value = false
-                reader.value?.goToFraction(v / 100)
-              },
-              onSeekCommit: (v: number) => {
-                isDragging.value = false
-                reader.value?.goToFraction(v / 100)
-              },
-              onToggleDarkMode: setDarkModeInternal,
-              onChangeFontSize: setFontSizeInternal,
-            }, {
-              toolbarRight: () => slots.mobileToolbarRight?.(),
-            }),
-          ]
-        : [
-            viewer,
-            loading,
-            h(DesktopToolbar, {
-              darkMode: darkMode(),
-              fontSize: fontSize(),
-              onToggleToc: () => (tocOpen.value = true),
-              onToggleSearch: () => (searchOpen.value = true),
-              onPrevSection: () => reader.value?.prevSection(),
-              onPrevPage: () => reader.value?.prevPage(),
-              onNextPage: () => reader.value?.nextPage(),
-              onNextSection: () => reader.value?.nextSection(),
-              onToggleDarkMode: () => setDarkModeInternal(!darkMode()),
-              onChangeFontSize: setFontSizeInternal,
-            }),
-            tocOpen.value || searchOpen.value ? h('div', { class: 'epub-reader__overlay', onClick: closeDrawers }) : null,
-            h(TocDrawer, {
-              isOpen: tocOpen.value,
-              toc: toc.value,
-              onClose: () => (tocOpen.value = false),
-              onSelect: (href: string | undefined) => {
-                if (href) reader.value?.goTo(href)
-              },
-            }),
-            h(SearchDrawer, {
-              isOpen: searchOpen.value,
-              status: status.value,
-              query: searchQuery.value,
-              options: searchOptions.value,
-              progressPercent: searchProgressPercent.value,
-              searching: searching.value,
-              results: searchResults.value,
-              onClose: () => (searchOpen.value = false),
-              onSearch: (q: string) => void runSearch(q),
-              'onUpdate:query': (v: string) => (searchQuery.value = v),
-              'onUpdate:options': (v: Partial<SearchOptions>) => (searchOptions.value = { ...searchOptions.value, ...v }),
-              onCancelSearch: () => reader.value?.cancelSearch(),
-              onSelectResult: (cfi: string) => {
-                if (cfi) reader.value?.goTo(cfi)
-              },
-            }),
-            h(DesktopBottomBar, {
-              status: status.value,
-              errorText: errorText.value,
-              sectionLabel: sectionLabel,
-              displayedPercent: displayed,
-              onSeekStart: () => {
-                isSeeking.value = true
-                isDragging.value = true
-              },
-              onSeekChange: (v: number) => (seekPercent.value = v),
-              onSeekEnd: (v: number) => {
-                isDragging.value = false
-                reader.value?.goToFraction(v / 100)
-              },
-              onSeekCommit: (v: number) => {
-                isDragging.value = false
-                reader.value?.goToFraction(v / 100)
-              },
-            }),
-          ]
+      const children = [
+        viewer,
+        loading,
+        h(MobileUI, {
+          barVisible: layout.value === 'mobile' ? mobileBarVisible.value : true,
+          activePanel: mobilePanel.value,
+          toc: toc.value,
+          status: status.value,
+          errorText: errorText.value,
+          sectionLabel: sectionLabel,
+          displayedPercent: displayed,
+          darkMode: darkMode(),
+          fontSize: fontSize(),
+          lineHeight: lineHeight(),
+          letterSpacing: letterSpacing(),
+          searchQuery: searchQuery.value,
+          searchOptions: searchOptions.value,
+          searchProgressPercent: searchProgressPercent.value,
+          searching: searching.value,
+          searchResults: searchResults.value,
+
+          onPrevSection: () => reader.value?.prevSection(),
+          onPrevPage: () => reader.value?.prevPage(),
+          onNextPage: () => reader.value?.nextPage(),
+          onNextSection: () => reader.value?.nextSection(),
+
+          onTogglePanel: toggleMobilePanel,
+          onClosePanel: closeMobileSheet,
+          onTocSelect: (href: string | undefined) => {
+            if (href) reader.value?.goTo(href)
+          },
+          onSearch: (q: string) => void runSearch(q),
+          'onUpdate:searchQuery': (v: string) => (searchQuery.value = v),
+          'onUpdate:searchOptions': (v: Partial<SearchOptions>) => (searchOptions.value = { ...searchOptions.value, ...v }),
+          onCancelSearch: () => reader.value?.cancelSearch(),
+          onSearchResultSelect: (cfi: string) => {
+            if (cfi) reader.value?.goTo(cfi)
+          },
+          onSeekStart: () => {
+            isSeeking.value = true
+            isDragging.value = true
+          },
+          onSeekChange: (v: number) => (seekPercent.value = v),
+          onSeekEnd: (v: number) => {
+            isDragging.value = false
+            reader.value?.goToFraction(v / 100)
+          },
+          onSeekCommit: (v: number) => {
+            isDragging.value = false
+            reader.value?.goToFraction(v / 100)
+          },
+          onToggleDarkMode: setDarkModeInternal,
+          onChangeFontSize: setFontSizeInternal,
+          onChangeLineHeight: setLineHeightInternal,
+          onChangeLetterSpacing: setLetterSpacingInternal,
+        }, {
+          toolbarRight: () => slots.mobileToolbarRight?.(),
+        }),
+      ]
 
       return h(
         'div',
         {
           ref: rootEl,
           class: 'epub-reader',
+          style: props.themeColor ? ({ '--epub-reader-accent': props.themeColor } as any) : undefined,
           'data-theme': darkMode() ? 'dark' : 'light',
           'data-layout': layout.value,
           'aria-busy': downloadLoading.value != null,

@@ -11,6 +11,10 @@ type MobileUIProps = {
   onTogglePanel: (panel: MobilePanel) => void
   onClosePanel: () => void
   toolbarRight?: React.ReactNode
+  onPrevSection: () => void
+  onPrevPage: () => void
+  onNextPage: () => void
+  onNextSection: () => void
   
   // Data props
   toc: TocItem[]
@@ -21,6 +25,8 @@ type MobileUIProps = {
   displayedPercent: number
   darkMode: boolean
   fontSize: number
+  lineHeight: number
+  letterSpacing: number
   
   // Actions
   onTocSelect: (href?: string) => void
@@ -38,6 +44,8 @@ type MobileUIProps = {
   
   onToggleDarkMode: (val: boolean) => void
   onFontSizeChange: (val: number) => void
+  onLineHeightChange: (val: number) => void
+  onLetterSpacingChange: (val: number) => void
 }
 
 /**
@@ -50,6 +58,10 @@ export const MobileUI = ({
   onTogglePanel,
   onClosePanel,
   toolbarRight,
+  onPrevSection,
+  onPrevPage,
+  onNextPage,
+  onNextSection,
   toc,
   search,
   status,
@@ -58,6 +70,8 @@ export const MobileUI = ({
   displayedPercent,
   darkMode,
   fontSize,
+  lineHeight,
+  letterSpacing,
   onTocSelect,
   onSearch,
   onSearchQueryChange,
@@ -70,6 +84,8 @@ export const MobileUI = ({
   onSeekCommit,
   onToggleDarkMode,
   onFontSizeChange,
+  onLineHeightChange,
+  onLetterSpacingChange,
 }: MobileUIProps) => {
   const mobileTitle = activePanel === 'menu' ? '目录' : activePanel === 'search' ? '搜索' : activePanel === 'progress' ? '进度' : activePanel === 'settings' ? '设置' : ''
 
@@ -409,6 +425,52 @@ export const MobileUI = ({
                 </span>
                 {sectionLabel ? <span>{sectionLabel}</span> : null}
               </div>
+              <div className="epub-reader__mnav">
+                <button
+                  type="button"
+                  className="epub-reader__btn"
+                  onClick={onPrevSection}
+                  onTouchStart={(e) => handleTouchStart(e, '上一章')}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  title="上一章"
+                >
+                  <SvgIcon name="chevrons-left" />
+                </button>
+                <button
+                  type="button"
+                  className="epub-reader__btn"
+                  onClick={onPrevPage}
+                  onTouchStart={(e) => handleTouchStart(e, '上一页')}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  title="上一页"
+                >
+                  <SvgIcon name="chevron-left" />
+                </button>
+                <button
+                  type="button"
+                  className="epub-reader__btn"
+                  onClick={onNextPage}
+                  onTouchStart={(e) => handleTouchStart(e, '下一页')}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  title="下一页"
+                >
+                  <SvgIcon name="chevron-right" />
+                </button>
+                <button
+                  type="button"
+                  className="epub-reader__btn"
+                  onClick={onNextSection}
+                  onTouchStart={(e) => handleTouchStart(e, '下一章')}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  title="下一章"
+                >
+                  <SvgIcon name="chevrons-right" />
+                </button>
+              </div>
               <div className="epub-reader__mprogress">
                 <input
                   className="epub-reader__range"
@@ -476,6 +538,40 @@ export const MobileUI = ({
                   </div>
                 </div>
                 <div className="epub-reader__mfont-a is-big">A</div>
+              </div>
+
+              <div className="epub-reader__msetting">
+                <div className="epub-reader__msetting-head">
+                  <div className="epub-reader__msetting-label">行高</div>
+                  <div className="epub-reader__msetting-value">{lineHeight.toFixed(2)}</div>
+                </div>
+                <input
+                  className="epub-reader__range"
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.05}
+                  value={lineHeight}
+                  aria-label="行高"
+                  onChange={(e) => onLineHeightChange(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="epub-reader__msetting">
+                <div className="epub-reader__msetting-head">
+                  <div className="epub-reader__msetting-label">字间距</div>
+                  <div className="epub-reader__msetting-value">{letterSpacing.toFixed(2)}em</div>
+                </div>
+                <input
+                  className="epub-reader__range"
+                  type="range"
+                  min={0}
+                  max={0.3}
+                  step={0.01}
+                  value={letterSpacing}
+                  aria-label="字间距"
+                  onChange={(e) => onLetterSpacingChange(Number(e.target.value))}
+                />
               </div>
 
               <button
