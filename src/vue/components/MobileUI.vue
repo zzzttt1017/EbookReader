@@ -12,6 +12,7 @@ const props = defineProps<{
   
   // Data
   toc: TocItem[]
+  activeTocHref?: string
   status: 'idle' | 'ready' | 'opening' | 'error'
   errorText: string
   sectionLabel: string
@@ -469,6 +470,7 @@ const handleTouchEnd = () => {
           <TocTree
             v-if="toc.length"
             :items="toc"
+            :active-href="activeTocHref"
             @select="(href) => {
               emit('tocSelect', href)
               closePanelSafe()

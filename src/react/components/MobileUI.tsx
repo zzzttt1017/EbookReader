@@ -18,6 +18,7 @@ type MobileUIProps = {
   
   // Data props
   toc: TocItem[]
+  activeTocHref?: string
   search: SearchState
   status: 'idle' | 'ready' | 'opening' | 'error'
   errorText: string
@@ -63,6 +64,7 @@ export const MobileUI = ({
   onNextPage,
   onNextSection,
   toc,
+  activeTocHref,
   search,
   status,
   errorText,
@@ -400,6 +402,7 @@ export const MobileUI = ({
             toc.length ? (
               <TocTree
                 items={toc}
+                activeHref={activeTocHref}
                 onSelect={(href) => {
                   onTocSelect(href)
                   closePanelSafe()

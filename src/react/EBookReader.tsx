@@ -628,6 +628,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
         onNextPage={() => readerRef.current?.nextPage()}
         onNextSection={() => readerRef.current?.nextSection()}
         toc={toc}
+        activeTocHref={progressInfo?.tocItem?.href ?? undefined}
         search={search}
         status={status}
         errorText={errorText}

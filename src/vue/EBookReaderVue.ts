@@ -564,6 +564,7 @@ export const EBookReaderVue = defineComponent({
           barVisible: mobileBarVisible.value,
           activePanel: mobilePanel.value,
           toc: toc.value,
+          activeTocHref: progressInfo.value?.tocItem?.href ?? undefined,
           status: status.value,
           errorText: errorText.value,
           sectionLabel: sectionLabel,

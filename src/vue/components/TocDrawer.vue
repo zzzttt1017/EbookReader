@@ -6,6 +6,7 @@ import SvgIcon from './SvgIcon.vue'
 defineProps<{
   isOpen: boolean
   toc: TocItem[]
+  activeTocHref?: string
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +27,7 @@ const emit = defineEmits<{
       <TocTree
         v-if="toc.length"
         :items="toc"
+        :active-href="activeTocHref"
         @select="(href) => {
           emit('select', href)
           emit('close')

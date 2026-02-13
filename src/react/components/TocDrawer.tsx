@@ -7,12 +7,13 @@ type TocDrawerProps = {
   onClose: () => void
   toc: TocItem[]
   onSelect: (href?: string) => void
+  activeHref?: string
 }
 
 /**
  * 目录侧边栏组件
  */
-export const TocDrawer = ({ isOpen, onClose, toc, onSelect }: TocDrawerProps) => {
+export const TocDrawer = ({ isOpen, onClose, toc, onSelect, activeHref }: TocDrawerProps) => {
   return (
     <aside className={`epub-reader__drawer ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
       <div className="epub-reader__drawer-header">
@@ -25,6 +26,7 @@ export const TocDrawer = ({ isOpen, onClose, toc, onSelect }: TocDrawerProps) =>
         {toc.length ? (
           <TocTree
             items={toc}
+            activeHref={activeHref}
             onSelect={(href) => {
               onSelect(href)
               onClose()
