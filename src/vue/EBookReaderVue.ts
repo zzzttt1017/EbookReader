@@ -266,6 +266,9 @@ export const EBookReaderVue = defineComponent({
     let gestureStartAt = 0
     let pcDragStartX = 0
     let pcDragStartY = 0
+    let pcDragMoved = false
+    let pcDragActionTaken = false
+    let pcDragStartAt = 0
     let pcDragTracking = false
     const boundDocs = new WeakSet<Document>()
 
@@ -279,8 +282,11 @@ export const EBookReaderVue = defineComponent({
         if (e.pointerType !== 'mouse') return
         if ((e.buttons & 1) !== 1) return
         pcDragTracking = true
+        pcDragMoved = false
+        pcDragActionTaken = false
         pcDragStartX = e.screenX
         pcDragStartY = e.screenY
+        pcDragStartAt = e.timeStamp
         return
       }
 
@@ -302,6 +308,20 @@ export const EBookReaderVue = defineComponent({
 
         const dx = e.screenX - pcDragStartX
         const dy = e.screenY - pcDragStartY
+
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) pcDragMoved = true
+
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 24) {
+          pcDragActionTaken = true
+          pcDragTracking = false
+          if (dy <= -24) {
+            mobileBarVisible.value = true
+          } else {
+            mobileBarVisible.value = false
+            mobilePanel.value = null
+          }
+          return
+        }
 
         if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 16) {
           pcDragTracking = false
@@ -344,8 +364,31 @@ export const EBookReaderVue = defineComponent({
 
     const pointerEndHandler = (e: PointerEvent) => {
       if (layout.value !== 'mobile') {
+        if (pcDragActionTaken) {
+          pcDragTracking = false
+          pcDragMoved = false
+          pcDragActionTaken = false
+          return
+        }
+
+        if (!pcDragTracking) {
+          pcDragMoved = false
+          return
+        }
+
+        const dx = e.screenX - pcDragStartX
+        const dy = e.screenY - pcDragStartY
+        const dt = e.timeStamp - pcDragStartAt
+        const isTap = !pcDragMoved && Math.hypot(dx, dy) <= 10 && dt <= 300
+        if (isTap) {
+          const next = !mobileBarVisible.value
+          mobileBarVisible.value = next
+          if (!next) mobilePanel.value = null
+        }
+
         pcDragTracking = false
-        gestureTracking = false
+        pcDragMoved = false
+        pcDragActionTaken = false
         return
       }
 
@@ -484,11 +527,9 @@ export const EBookReaderVue = defineComponent({
 
     watch(
       () => layout.value,
-      (v) => {
-        if (v !== 'mobile') {
-          mobilePanel.value = null
-          mobileBarVisible.value = false
-        }
+      () => {
+        mobilePanel.value = null
+        mobileBarVisible.value = false
       },
     )
 
@@ -520,7 +561,7 @@ export const EBookReaderVue = defineComponent({
         viewer,
         loading,
         h(MobileUI, {
-          barVisible: layout.value === 'mobile' ? mobileBarVisible.value : true,
+          barVisible: mobileBarVisible.value,
           activePanel: mobilePanel.value,
           toc: toc.value,
           status: status.value,

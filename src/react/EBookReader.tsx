@@ -129,7 +129,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const layoutRef = useRef(layout)
   const boundDocsRef = useRef(new WeakSet<Document>())
   const gestureRef = useRef({ startX: 0, startY: 0, startAt: 0, tracking: false, moved: false, actionTaken: false })
-  const pcDragRef = useRef({ startX: 0, startY: 0, tracking: false, actionTaken: false })
+  const pcDragRef = useRef({ startX: 0, startY: 0, startAt: 0, tracking: false, moved: false, actionTaken: false })
   const isDraggingRef = useRef(false)
 
   const percentage = useMemo(() => Math.round((progressInfo?.fraction ?? 0) * 100), [progressInfo])
@@ -151,7 +151,6 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
   // 布局切换时重置移动端面板状态
   useEffect(() => {
-    if (layout === 'mobile') return
     setMobilePanel(null)
     setMobileBarVisible(false)
   }, [layout])
@@ -178,8 +177,10 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
       if ((e.buttons & 1) !== 1) return
       pcDragRef.current.tracking = true
       pcDragRef.current.actionTaken = false
+      pcDragRef.current.moved = false
       pcDragRef.current.startX = e.screenX
       pcDragRef.current.startY = e.screenY
+      pcDragRef.current.startAt = e.timeStamp
       return
     }
 
@@ -201,6 +202,20 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
       const dx = e.screenX - pcDragRef.current.startX
       const dy = e.screenY - pcDragRef.current.startY
+
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) pcDragRef.current.moved = true
+
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 24) {
+        pcDragRef.current.actionTaken = true
+        pcDragRef.current.tracking = false
+        if (dy <= -24) {
+          setMobileBarVisible(true)
+        } else {
+          setMobileBarVisible(false)
+          setMobilePanel(null)
+        }
+        return
+      }
 
       if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 16) {
         pcDragRef.current.tracking = false
@@ -244,7 +259,32 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
 
   const onPointerEnd = useCallback((e: PointerEvent) => {
     if (layoutRef.current !== 'mobile') {
+      if (pcDragRef.current.actionTaken) {
+        pcDragRef.current.tracking = false
+        pcDragRef.current.moved = false
+        pcDragRef.current.actionTaken = false
+        return
+      }
+
+      if (!pcDragRef.current.tracking) {
+        pcDragRef.current.moved = false
+        return
+      }
+
+      const dx = e.screenX - pcDragRef.current.startX
+      const dy = e.screenY - pcDragRef.current.startY
+      const dt = e.timeStamp - pcDragRef.current.startAt
+      const isTap = !pcDragRef.current.moved && Math.hypot(dx, dy) <= 10 && dt <= 300
+      if (isTap) {
+        setMobileBarVisible((prev) => {
+          const next = !prev
+          if (!next) setMobilePanel(null)
+          return next
+        })
+      }
+
       pcDragRef.current.tracking = false
+      pcDragRef.current.moved = false
       pcDragRef.current.actionTaken = false
       return
     }
@@ -578,7 +618,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
       ) : null}
 
       <MobileUI
-        barVisible={layout === 'mobile' ? mobileBarVisible : true}
+        barVisible={mobileBarVisible}
         activePanel={mobilePanel}
         onTogglePanel={toggleMobilePanel}
         onClosePanel={closeMobileSheet}
