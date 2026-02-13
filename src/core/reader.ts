@@ -27,16 +27,29 @@ const getContentCSS = (fontSize: number, isDark: boolean, lineHeight: number, le
 @namespace epub "http://www.idpf.org/2007/ops";
 :root:root {
   color-scheme: ${isDark ? 'dark' : 'light'} !important;
+  --epub-reader-content-fg: ${isDark ? '#e0e0e0' : 'black'};
+  --epub-reader-content-heading: ${isDark ? '#fafafa' : '#2c3e50'};
+  --epub-reader-content-link: ${isDark ? '#64b5f6' : '#2563eb'};
 }
 :root:root body {
   background-color: transparent !important;
-  color: ${isDark ? '#e0e0e0' : 'black'} !important;
+  color: var(--epub-reader-content-fg) !important;
   font-size: ${fontSize}% !important;
   line-height: ${lineHeight} !important;
   letter-spacing: ${letterSpacing}em !important;
   -webkit-text-size-adjust: 100% !important;
   text-size-adjust: 100% !important;
 }
+
+${isDark ? `
+:root:root body :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--epub-reader-content-heading) !important;
+}
+
+:root:root body :is(h1, h2, h3, h4, h5, h6) :is(span, strong, em, b, i, u, small, sup, sub) {
+  color: inherit !important;
+}
+` : ''}
 
 :root:root body :is(p, li, blockquote) {
   line-height: inherit !important;
@@ -47,7 +60,7 @@ const getContentCSS = (fontSize: number, isDark: boolean, lineHeight: number, le
 }
 
 :root:root body a {
-  color: ${isDark ? '#64b5f6' : '#2563eb'} !important;
+  color: var(--epub-reader-content-link) !important;
 }
 
 :root:root body img {

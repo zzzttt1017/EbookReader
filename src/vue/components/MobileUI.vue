@@ -74,11 +74,27 @@ const fontSliderValue = ref(displayedFontSize.value)
 const fontSliderWrapRef = ref<HTMLElement | null>(null)
 const fontSliderWidth = ref(0)
 const isFontDragging = ref(false)
-const fontThumbSize = 34
 const fontMin = 10
 const fontMax = 40
 let fontRo: ResizeObserver | null = null
 let fontDebounceTimer: number | null = null
+
+const lineHeightSliderWrapRef = ref<HTMLElement | null>(null)
+const lineHeightSliderWidth = ref(0)
+const isLineHeightDragging = ref(false)
+let lineHeightRo: ResizeObserver | null = null
+
+const letterSpacingSliderWrapRef = ref<HTMLElement | null>(null)
+const letterSpacingSliderWidth = ref(0)
+const isLetterSpacingDragging = ref(false)
+let letterSpacingRo: ResizeObserver | null = null
+
+const progressSliderWrapRef = ref<HTMLElement | null>(null)
+const progressSliderWidth = ref(0)
+const isProgressDragging = ref(false)
+let progressRo: ResizeObserver | null = null
+
+const settingThumbSize = 32
 
 watch(displayedFontSize, (v) => {
   fontSliderValue.value = v
@@ -88,6 +104,27 @@ const teardownFontResize = () => {
   if (fontRo) {
     fontRo.disconnect()
     fontRo = null
+  }
+}
+
+const teardownLineHeightResize = () => {
+  if (lineHeightRo) {
+    lineHeightRo.disconnect()
+    lineHeightRo = null
+  }
+}
+
+const teardownLetterSpacingResize = () => {
+  if (letterSpacingRo) {
+    letterSpacingRo.disconnect()
+    letterSpacingRo = null
+  }
+}
+
+const teardownProgressResize = () => {
+  if (progressRo) {
+    progressRo.disconnect()
+    progressRo = null
   }
 }
 
@@ -104,23 +141,110 @@ const setupFontResize = async () => {
   fontRo.observe(el)
 }
 
+const setupLineHeightResize = async () => {
+  await nextTick()
+  const el = lineHeightSliderWrapRef.value
+  if (!el) return
+  const update = () => {
+    lineHeightSliderWidth.value = el.getBoundingClientRect().width
+  }
+  update()
+  teardownLineHeightResize()
+  lineHeightRo = new ResizeObserver(() => update())
+  lineHeightRo.observe(el)
+}
+
+const setupLetterSpacingResize = async () => {
+  await nextTick()
+  const el = letterSpacingSliderWrapRef.value
+  if (!el) return
+  const update = () => {
+    letterSpacingSliderWidth.value = el.getBoundingClientRect().width
+  }
+  update()
+  teardownLetterSpacingResize()
+  letterSpacingRo = new ResizeObserver(() => update())
+  letterSpacingRo.observe(el)
+}
+
+const setupProgressResize = async () => {
+  await nextTick()
+  const el = progressSliderWrapRef.value
+  if (!el) return
+  const update = () => {
+    progressSliderWidth.value = el.getBoundingClientRect().width
+  }
+  update()
+  teardownProgressResize()
+  progressRo = new ResizeObserver(() => update())
+  progressRo.observe(el)
+}
+
 watch(
   () => props.activePanel,
   (p) => {
-    if (p === 'settings') void setupFontResize()
-    else teardownFontResize()
+    if (p === 'settings') {
+      void setupFontResize()
+      void setupLineHeightResize()
+      void setupLetterSpacingResize()
+    } else {
+      teardownFontResize()
+      teardownLineHeightResize()
+      teardownLetterSpacingResize()
+    }
+
+    if (p === 'progress') {
+      void setupProgressResize()
+    } else {
+      teardownProgressResize()
+    }
   },
   { immediate: true },
 )
 
-onBeforeUnmount(() => teardownFontResize())
+onBeforeUnmount(() => {
+  teardownFontResize()
+  teardownLineHeightResize()
+  teardownLetterSpacingResize()
+  teardownProgressResize()
+})
 
-const fontProgressPercent = computed(() => ((fontSliderValue.value - fontMin) / (fontMax - fontMin)) * 100)
+const lineHeightMin = 1
+const lineHeightMax = 3
+const lineHeightProgressPercent = computed(() => clamp(((props.lineHeight - lineHeightMin) / (lineHeightMax - lineHeightMin)) * 100, 0, 100))
+const letterSpacingMin = 0
+const letterSpacingMax = 0.3
+const letterSpacingProgressPercent = computed(() => clamp(((props.letterSpacing - letterSpacingMin) / (letterSpacingMax - letterSpacingMin)) * 100, 0, 100))
 const fontThumbLeft = computed(() => {
   if (!fontSliderWidth.value) return 0
   const percent = (fontSliderValue.value - fontMin) / (fontMax - fontMin)
-  const half = fontThumbSize / 2
-  return Math.min(fontSliderWidth.value - half, Math.max(half, half + percent * (fontSliderWidth.value - fontThumbSize)))
+  const half = settingThumbSize / 2
+  return Math.min(fontSliderWidth.value - half, Math.max(half, half + percent * (fontSliderWidth.value - settingThumbSize)))
+})
+
+const lineHeightThumbLeft = computed(() => {
+  if (!lineHeightSliderWidth.value) return 0
+  const half = settingThumbSize / 2
+  return Math.min(
+    lineHeightSliderWidth.value - half,
+    Math.max(half, half + (lineHeightProgressPercent.value / 100) * (lineHeightSliderWidth.value - settingThumbSize)),
+  )
+})
+
+const letterSpacingThumbLeft = computed(() => {
+  if (!letterSpacingSliderWidth.value) return 0
+  const half = settingThumbSize / 2
+  return Math.min(
+    letterSpacingSliderWidth.value - half,
+    Math.max(half, half + (letterSpacingProgressPercent.value / 100) * (letterSpacingSliderWidth.value - settingThumbSize)),
+  )
+})
+
+const progressThumbLeft = computed(() => {
+  if (!progressSliderWidth.value) return 0
+  const half = settingThumbSize / 2
+  const percent = clamp(props.displayedPercent / 100, 0, 1)
+  return Math.min(progressSliderWidth.value - half, Math.max(half, half + percent * (progressSliderWidth.value - settingThumbSize)))
 })
 
 const flushFontSize = () => {
@@ -370,9 +494,22 @@ const handleTouchEnd = () => {
             <button type="button" class="epub-reader__btn epub-reader__btn--wide" :disabled="status !== 'ready'" @click="emit('search', searchQuery)">
               搜索
             </button>
+            <button
+              v-if="searchQuery.trim()"
+              type="button"
+              class="epub-reader__link"
+              :disabled="status !== 'ready'"
+              @click="() => {
+                emit('cancelSearch')
+                emit('update:searchQuery', '')
+                emit('search', '')
+              }"
+            >
+              重置
+            </button>
           </div>
 
-          <div class="epub-reader__checks">
+          <!-- <div class="epub-reader__checks">
             <label class="epub-reader__check">
               <input
                 type="checkbox"
@@ -405,7 +542,7 @@ const handleTouchEnd = () => {
             <button v-if="searching" type="button" class="epub-reader__link" @click="emit('cancelSearch')">
               取消
             </button>
-          </div>
+          </div> -->
 
           <SearchResultList v-if="searchResults.length" :results="searchResults" @select="(cfi) => emit('searchResultSelect', cfi)" />
           <div v-else class="epub-reader__empty">{{ searchQuery.trim() ? '无匹配结果' : '请输入关键词' }}</div>
@@ -418,7 +555,7 @@ const handleTouchEnd = () => {
             </span>
             <span v-if="sectionLabel">{{ sectionLabel }}</span>
           </div>
-          <div class="epub-reader__mprogress">
+          <div ref="progressSliderWrapRef" :class="['epub-reader__mprogress', { 'is-dragging': isProgressDragging }]">
             <input
               class="epub-reader__range"
               type="range"
@@ -431,10 +568,17 @@ const handleTouchEnd = () => {
                 emit('seekStart')
                 emit('seekChange', Number(e.target.value))
               }"
-              @pointerup="(e: any) => emit('seekEnd', Number(e.target.value))"
+              @pointerdown="isProgressDragging = true"
+              @pointerup="(e: any) => { emit('seekEnd', Number(e.target.value)); isProgressDragging = false }"
+              @pointercancel="isProgressDragging = false"
+              @touchstart="isProgressDragging = true"
+              @touchend="(e: any) => { emit('seekEnd', Number(e.target.value)); isProgressDragging = false }"
+              @touchcancel="isProgressDragging = false"
               @keyup.enter="(e: any) => emit('seekCommit', Number(e.target.value))"
             />
-            <div class="epub-reader__mprogress-percent">{{ displayedPercent }}%</div>
+            <div class="epub-reader__mprogress-thumb" :style="{ left: `${progressThumbLeft}px`, width: `${settingThumbSize}px`, height: `${settingThumbSize}px` }">
+              {{ displayedPercent }}%
+            </div>
           </div>
 
           <div class="epub-reader__mnav">
@@ -455,70 +599,86 @@ const handleTouchEnd = () => {
 
         <template v-if="activePanel === 'settings'">
           <div class="epub-reader__msettings">
-            <div class="epub-reader__mfont-range">
-              <div class="epub-reader__mfont-a is-small">A</div>
-              <div ref="fontSliderWrapRef" :class="['epub-reader__mfont-slider', { 'is-dragging': isFontDragging }]">
-                <input
-                  class="epub-reader__range"
-                  type="range"
-                  :min="fontMin"
-                  :max="fontMax"
-                  :step="1"
-                  :value="fontSliderValue"
-                  :style="{ background: `linear-gradient(to right, var(--epub-reader-range-fill) 0%, var(--epub-reader-range-fill) ${fontProgressPercent}%, var(--epub-reader-range-track) ${fontProgressPercent}%, var(--epub-reader-range-track) 100%)` }"
-                  aria-label="字号"
-                  @input="handleFontSliderInput"
-                  @pointerdown="isFontDragging = true"
-                  @pointerup="() => { isFontDragging = false; flushFontSize() }"
-                  @pointercancel="() => { isFontDragging = false; flushFontSize() }"
-                  @touchstart="isFontDragging = true"
-                  @touchend="() => { isFontDragging = false; flushFontSize() }"
-                />
-                <div class="epub-reader__mfont-thumb" :style="{ left: `${fontThumbLeft}px`, width: `${fontThumbSize}px`, height: `${fontThumbSize}px` }">
-                  {{ fontSliderValue }}
+            <div class="epub-reader__msettings-row">
+              <div class="epub-reader__msetting">
+                <div ref="fontSliderWrapRef" :class="['epub-reader__mslider', { 'is-dragging': isFontDragging }]">
+                  <div class="epub-reader__mslider-label is-left smaller">A</div>
+                  <div class="epub-reader__mslider-label is-right larger">A</div>
+                  <input
+                    class="epub-reader__range"
+                    type="range"
+                    :min="fontMin"
+                    :max="fontMax"
+                    :step="1"
+                    :value="fontSliderValue"
+                    aria-label="字号"
+                    @input="handleFontSliderInput"
+                    @pointerdown="isFontDragging = true"
+                    @pointerup="() => { isFontDragging = false; flushFontSize() }"
+                    @pointercancel="() => { isFontDragging = false; flushFontSize() }"
+                    @touchstart="isFontDragging = true"
+                    @touchend="() => { isFontDragging = false; flushFontSize() }"
+                    @touchcancel="() => { isFontDragging = false; flushFontSize() }"
+                    @keyup.enter="flushFontSize"
+                  />
+                  <div class="epub-reader__mslider-thumb" :style="{ left: `${fontThumbLeft}px`, width: `${settingThumbSize}px`, height: `${settingThumbSize}px` }">字号</div>
                 </div>
               </div>
-              <div class="epub-reader__mfont-a is-big">A</div>
             </div>
 
             <div class="epub-reader__msettings-row">
               <div class="epub-reader__msetting">
-                <div class="epub-reader__msetting-head">
-                  <div class="epub-reader__msetting-label">行高</div>
-                  <div class="epub-reader__msetting-value">{{ props.lineHeight.toFixed(2) }}</div>
+                <div ref="lineHeightSliderWrapRef" :class="['epub-reader__mslider', { 'is-dragging': isLineHeightDragging }]">
+                  <div class="epub-reader__mslider-label is-left">小</div>
+                  <div class="epub-reader__mslider-label is-right">大</div>
+                  <input
+                    class="epub-reader__range"
+                    type="range"
+                    :min="1"
+                    :max="3"
+                    :step="0.05"
+                    :value="props.lineHeight"
+                    aria-label="行高"
+                    @input="(e: any) => emit('changeLineHeight', Number(e.target.value))"
+                    @pointerdown="isLineHeightDragging = true"
+                    @pointerup="isLineHeightDragging = false"
+                    @pointercancel="isLineHeightDragging = false"
+                    @touchstart="isLineHeightDragging = true"
+                    @touchend="isLineHeightDragging = false"
+                    @touchcancel="isLineHeightDragging = false"
+                  />
+                  <div class="epub-reader__mslider-thumb" :style="{ left: `${lineHeightThumbLeft}px`, width: `${settingThumbSize}px`, height: `${settingThumbSize}px` }">行高</div>
                 </div>
-                <input
-                  class="epub-reader__range"
-                  type="range"
-                  :min="1"
-                  :max="3"
-                  :step="0.05"
-                  :value="props.lineHeight"
-                  aria-label="行高"
-                  @input="(e: any) => emit('changeLineHeight', Number(e.target.value))"
-                />
               </div>
 
               <div class="epub-reader__msetting">
-                <div class="epub-reader__msetting-head">
-                  <div class="epub-reader__msetting-label">字间距</div>
-                  <div class="epub-reader__msetting-value">{{ props.letterSpacing.toFixed(2) }}em</div>
+                <div ref="letterSpacingSliderWrapRef" :class="['epub-reader__mslider', { 'is-dragging': isLetterSpacingDragging }]">
+                  <div class="epub-reader__mslider-label is-left">紧</div>
+                  <div class="epub-reader__mslider-label is-right">松</div>
+                  <input
+                    class="epub-reader__range"
+                    type="range"
+                    :min="0"
+                    :max="0.3"
+                    :step="0.01"
+                    :value="props.letterSpacing"
+                    aria-label="字间距"
+                    @input="(e: any) => emit('changeLetterSpacing', Number(e.target.value))"
+                    @pointerdown="isLetterSpacingDragging = true"
+                    @pointerup="isLetterSpacingDragging = false"
+                    @pointercancel="isLetterSpacingDragging = false"
+                    @touchstart="isLetterSpacingDragging = true"
+                    @touchend="isLetterSpacingDragging = false"
+                    @touchcancel="isLetterSpacingDragging = false"
+                  />
+                  <div class="epub-reader__mslider-thumb" :style="{ left: `${letterSpacingThumbLeft}px`, width: `${settingThumbSize}px`, height: `${settingThumbSize}px` }">间距</div>
                 </div>
-                <input
-                  class="epub-reader__range"
-                  type="range"
-                  :min="0"
-                  :max="0.3"
-                  :step="0.01"
-                  :value="props.letterSpacing"
-                  aria-label="字间距"
-                  @input="(e: any) => emit('changeLetterSpacing', Number(e.target.value))"
-                />
               </div>
 
               <button
                 type="button"
                 class="epub-reader__btn"
+                aria-size="small"
                 :aria-pressed="darkMode"
                 :aria-label="darkMode ? '暗黑模式：开，点击切换到亮色' : '暗黑模式：关，点击切换到暗黑'"
                 :title="darkMode ? '切换到亮色' : '切换到暗黑'"
