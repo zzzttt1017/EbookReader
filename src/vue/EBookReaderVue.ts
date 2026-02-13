@@ -279,8 +279,7 @@ export const EBookReaderVue = defineComponent({
       if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
 
       if (layout.value !== 'mobile') {
-        if (e.pointerType !== 'mouse') return
-        if ((e.buttons & 1) !== 1) return
+        if (e.pointerType === 'mouse' && (e.buttons & 1) !== 1) return
         pcDragTracking = true
         pcDragMoved = false
         pcDragActionTaken = false
@@ -301,7 +300,7 @@ export const EBookReaderVue = defineComponent({
     const pointerMoveHandler = (e: PointerEvent) => {
       if (layout.value !== 'mobile') {
         if (!pcDragTracking) return
-        if (e.pointerType !== 'mouse' || (e.buttons & 1) !== 1) {
+        if (e.pointerType === 'mouse' && (e.buttons & 1) !== 1) {
           pcDragTracking = false
           return
         }

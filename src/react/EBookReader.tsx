@@ -173,8 +173,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
     if (t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable="true"]')) return
 
     if (layoutRef.current !== 'mobile') {
-      if (e.pointerType !== 'mouse') return
-      if ((e.buttons & 1) !== 1) return
+      if (e.pointerType === 'mouse' && (e.buttons & 1) !== 1) return
       pcDragRef.current.tracking = true
       pcDragRef.current.actionTaken = false
       pcDragRef.current.moved = false
@@ -195,7 +194,7 @@ export const EBookReader = forwardRef<EBookReaderReactHandle, EBookReaderReactPr
   const onPointerMove = useCallback((e: PointerEvent) => {
     if (layoutRef.current !== 'mobile') {
       if (!pcDragRef.current.tracking) return
-      if (e.pointerType !== 'mouse' || (e.buttons & 1) !== 1) {
+      if (e.pointerType === 'mouse' && (e.buttons & 1) !== 1) {
         pcDragRef.current.tracking = false
         return
       }
