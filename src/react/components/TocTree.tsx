@@ -6,29 +6,49 @@ type TocTreeProps = {
   items: TocItem[]
   onSelect: (href?: string) => void
   activeHref?: string
+  _resolvedActiveHref?: string // Internal: 递归传递的已解析唯一高亮项
+}
+
+const normalizeHref = (href?: string) => (href ?? '').split('#')[0]
+
+const hasExact = (list: TocItem[], href: string): boolean =>
+  list.some((it) => it.href === href || (it.subitems?.length ? hasExact(it.subitems, href) : false))
+
+const findFirstBaseMatch = (list: TocItem[], baseHref: string): string | undefined => {
+  for (const item of list) {
+    if (item.href && normalizeHref(item.href) === baseHref) return item.href
+    if (item.subitems?.length) {
+      const found = findFirstBaseMatch(item.subitems, baseHref)
+      if (found) return found
+    }
+  }
+  return undefined
 }
 
 /**
  * 目录树组件
  * 递归渲染目录项
  */
-export const TocTree = ({ items, onSelect, activeHref }: TocTreeProps) => {
+export const TocTree = ({ items, onSelect, activeHref, _resolvedActiveHref }: TocTreeProps) => {
   const rootRef = useRef<HTMLUListElement | null>(null)
 
-  const normalizeHref = (href?: string) => (href ?? '').split('#')[0]
+  // 计算唯一的最佳匹配项 href
+  // 1. 如果有 _resolvedActiveHref (子组件)，直接使用
+  // 2. 否则 (根组件)，计算最佳匹配：先尝试精确匹配，如果失败则尝试模糊匹配第一个
+  const resolvedActiveHref = useMemo(() => {
+    if (_resolvedActiveHref !== undefined) return _resolvedActiveHref
+    if (!activeHref) return undefined
 
-  const hasExact = (list: TocItem[], href: string): boolean =>
-    list.some((it) => it.href === href || (it.subitems?.length ? hasExact(it.subitems, href) : false))
+    if (hasExact(items, activeHref)) return activeHref
 
-  const matchMode = useMemo<'exact' | 'base'>(() => {
-    if (!activeHref) return 'base'
-    return hasExact(items, activeHref) ? 'exact' : 'base'
-  }, [activeHref, items])
+    // 如果没有精确匹配，回退到 base 模式，但只取第一个匹配项
+    const base = normalizeHref(activeHref)
+    return findFirstBaseMatch(items, base)
+  }, [items, activeHref, _resolvedActiveHref])
 
   const isHrefMatch = (itemHref?: string) => {
-    if (!activeHref || !itemHref) return false
-    if (matchMode === 'exact') return itemHref === activeHref
-    return normalizeHref(itemHref) === normalizeHref(activeHref)
+    if (!resolvedActiveHref || !itemHref) return false
+    return itemHref === resolvedActiveHref
   }
 
   const containsActive = (item: TocItem): boolean => {
@@ -43,6 +63,7 @@ export const TocTree = ({ items, onSelect, activeHref }: TocTreeProps) => {
     if (!activeHref) return
 
     const raf = window.requestAnimationFrame(() => {
+      // 依赖 resolvedActiveHref 确保唯一
       const el = rootRef.current?.querySelector('[data-epub-toc-active="true"]')
       if (!(el instanceof HTMLElement)) return
 
@@ -110,7 +131,7 @@ export const TocTree = ({ items, onSelect, activeHref }: TocTreeProps) => {
                   <span className="epub-reader__toc-label">{label}</span>
                 )}
               </summary>
-              <TocTree items={item.subitems ?? []} onSelect={onSelect} activeHref={activeHref} />
+              <TocTree items={item.subitems ?? []} onSelect={onSelect} activeHref={activeHref} _resolvedActiveHref={resolvedActiveHref} />
             </details>
           </li>
         )

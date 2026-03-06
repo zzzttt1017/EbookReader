@@ -6,6 +6,7 @@ import SvgIcon from './SvgIcon.vue'
 const props = defineProps<{
   items: TocItem[]
   activeHref?: string
+  _resolvedActiveHref?: string // Internal: 递归传递的已解析唯一高亮项
 }>()
 
 const { items, activeHref } = toRefs(props)
@@ -19,15 +20,34 @@ const normalizeHref = (href?: string) => (href ?? '').split('#')[0]
 const hasExact = (list: TocItem[], href: string): boolean =>
   list.some((it) => it.href === href || (it.subitems?.length ? hasExact(it.subitems, href) : false))
 
-const matchMode = computed<'exact' | 'base'>(() => {
-  if (!activeHref.value) return 'base'
-  return hasExact(items.value, activeHref.value) ? 'exact' : 'base'
+const findFirstBaseMatch = (list: TocItem[], baseHref: string): string | undefined => {
+  for (const item of list) {
+    if (item.href && normalizeHref(item.href) === baseHref) return item.href
+    if (item.subitems?.length) {
+      const found = findFirstBaseMatch(item.subitems, baseHref)
+      if (found) return found
+    }
+  }
+  return undefined
+}
+
+// 计算唯一的最佳匹配项 href
+// 1. 如果有 _resolvedActiveHref (子组件)，直接使用
+// 2. 否则 (根组件)，计算最佳匹配：先尝试精确匹配，如果失败则尝试模糊匹配第一个
+const resolvedActiveHref = computed<string | undefined>(() => {
+  if (props._resolvedActiveHref !== undefined) return props._resolvedActiveHref
+  if (!activeHref.value) return undefined
+
+  if (hasExact(items.value, activeHref.value)) return activeHref.value
+
+  // 如果没有精确匹配，回退到 base 模式，但只取第一个匹配项
+  const base = normalizeHref(activeHref.value)
+  return findFirstBaseMatch(items.value, base)
 })
 
 const isHrefMatch = (itemHref?: string) => {
-  if (!activeHref.value || !itemHref) return false
-  if (matchMode.value === 'exact') return itemHref === activeHref.value
-  return normalizeHref(itemHref) === normalizeHref(activeHref.value)
+  if (!resolvedActiveHref.value || !itemHref) return false
+  return itemHref === resolvedActiveHref.value
 }
 
 const containsActive = (item: TocItem): boolean => {
@@ -86,7 +106,7 @@ watch(
             <span v-if="item.href" class="epub-reader__toc-label" @click.stop="emit('select', item.href)">{{ item.label || item.href || '未命名' }}</span>
             <span v-else class="epub-reader__toc-label">{{ item.label || item.href || '未命名' }}</span>
           </summary>
-          <TocTree :items="item.subitems" :active-href="activeHref" @select="emit('select', $event)" />
+          <TocTree :items="item.subitems" :active-href="activeHref" :_resolved-active-href="resolvedActiveHref" @select="emit('select', $event)" />
         </details>
       </template>
     </li>
