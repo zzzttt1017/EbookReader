@@ -1,6 +1,6 @@
 # @somecat/epub-reader
 
-轻量 EBookReader：基于 `foliate-js` 的 `foliate-view`，提供 React 18+ / Vue 3 组件（不依赖 Ant Design / UnoCSS），并内置基础 UI（目录、搜索、翻页、字号、明暗主题、阅读进度）。
+轻量 EBookReader：基于 `foliate-js` 的 `foliate-view`，提供 React 18+ / Vue 3 组件，内置基础 UI（目录、搜索、翻页、字号、行高、间距、明暗主题、阅读进度）。
 
 ## 安装
 
@@ -50,12 +50,20 @@ export default function Demo() {
 | fileUrl | `string \| null` | - | 传入 URL，组件内部下载并打开（需服务端允许跨域） |
 | className | `string` | - | 根容器额外类名 |
 | style | `React.CSSProperties` | - | 根容器行内样式 |
+| themeColor | `string` | - | 主题色（CSS 颜色值），覆盖默认蓝色 |
+| mobileToolbarRight | `React.ReactNode` | - | 移动端底部工具栏右侧自定义内容 |
 | defaultFontSize | `number` | `100` | 非受控字号初始值（百分比） |
 | fontSize | `number` | - | 受控字号（百分比） |
-| onFontSizeChange | `(fontSize: number) => void` | - | 字号变化回调（受控/非受控都会触发） |
+| onFontSizeChange | `(fontSize: number) => void` | - | 字号变化回调 |
+| defaultLineHeight | `number` | `1.6` | 非受控行高初始值 |
+| lineHeight | `number` | - | 受控行高 |
+| onLineHeightChange | `(lineHeight: number) => void` | - | 行高变化回调 |
+| defaultLetterSpacing | `number` | `0` | 非受控字间距初始值（em） |
+| letterSpacing | `number` | - | 受控字间距（em） |
+| onLetterSpacingChange | `(letterSpacing: number) => void` | - | 字间距变化回调 |
 | defaultDarkMode | `boolean` | `false` | 非受控暗黑模式初始值 |
 | darkMode | `boolean` | - | 受控暗黑模式 |
-| onDarkModeChange | `(darkMode: boolean) => void` | - | 明暗变化回调（受控/非受控都会触发） |
+| onDarkModeChange | `(darkMode: boolean) => void` | - | 明暗变化回调 |
 | enableKeyboardNav | `boolean` | `true` | 是否启用键盘左右键翻页、ESC 关闭抽屉 |
 | defaultSearchOptions | `SearchOptions` | `{ matchCase:false, wholeWords:false, matchDiacritics:false }` | 搜索默认选项 |
 | onReady | `(handle: EBookReaderHandle) => void` | - | Core 就绪回调（可拿到完整 handle） |
@@ -72,6 +80,7 @@ export default function Demo() {
 - `goToFraction(fraction: number)`（`0 ~ 1`）
 - `search(query: string, options?: SearchOptions): Promise<SearchResult[]>`
 - `cancelSearch()` / `clearSearch()`
+- `setFontSize(fontSize: number)` / `setLineHeight(lineHeight: number)` / `setLetterSpacing(letterSpacing: number)` / `setDarkMode(darkMode: boolean)`
 
 ## Vue 3
 
@@ -110,18 +119,29 @@ export default defineComponent({
 | --- | --- | --- | --- |
 | file | `File \| null` | - | 直接传入本地文件（`.epub`） |
 | fileUrl | `string \| null` | - | 传入 URL，组件内部下载并打开（需服务端允许跨域） |
+| themeColor | `string` | - | 主题色（CSS 颜色值），覆盖默认蓝色 |
 | defaultFontSize | `number` | `100` | 非受控字号初始值（百分比） |
 | fontSize | `number` | - | 受控字号（百分比） |
+| defaultLineHeight | `number` | `1.6` | 非受控行高初始值 |
+| lineHeight | `number` | - | 受控行高 |
+| defaultLetterSpacing | `number` | `0` | 非受控字间距初始值（em） |
+| letterSpacing | `number` | - | 受控字间距（em） |
 | defaultDarkMode | `boolean` | `false` | 非受控暗黑模式初始值 |
 | darkMode | `boolean` | - | 受控暗黑模式 |
 | enableKeyboardNav | `boolean` | `true` | 是否启用键盘左右键翻页、ESC 关闭抽屉 |
 | defaultSearchOptions | `SearchOptions` | `{ matchCase:false, wholeWords:false, matchDiacritics:false }` | 搜索默认选项 |
 
+### Slots
+
+| 插槽名 | 说明 |
+| --- | --- |
+| mobileToolbarRight | 移动端底部工具栏右侧自定义内容 |
+
 ### Emits / v-model
 
 - `ready(handle)` / `error(error)` / `progress(info)`
-- `fontSizeChange(fontSize)` / `darkModeChange(darkMode)`
-- `update:fontSize(fontSize)` / `update:darkMode(darkMode)`（用于 `v-model:fontSize`、`v-model:darkMode`）
+- `fontSizeChange(fontSize)` / `lineHeightChange(lineHeight)` / `letterSpacingChange(letterSpacing)` / `darkModeChange(darkMode)`
+- `update:fontSize(fontSize)` / `update:lineHeight(lineHeight)` / `update:letterSpacing(letterSpacing)` / `update:darkMode(darkMode)`（支持 `v-model`）
 
 ### Expose（命令式 API）
 
