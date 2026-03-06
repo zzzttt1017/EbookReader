@@ -94,7 +94,22 @@ export const TocTree = ({ items, onSelect, activeHref }: TocTreeProps) => {
               className={mergeClassName('epub-reader__toc-details', isInActivePath && 'is-active')}
               open={isInActivePath ? true : undefined}
             >
-              <summary className={mergeClassName('epub-reader__toc-summary', isInActivePath && 'is-active')}>{label}</summary>
+              <summary className={mergeClassName('epub-reader__toc-summary', isInActivePath && 'is-active')}>
+                {item.href ? (
+                  // 如果有 href，允许点击跳转，并阻止冒泡以避免切换展开状态
+                  <span
+                    className="epub-reader__toc-label"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelect(item.href)
+                    }}
+                  >
+                    {label}
+                  </span>
+                ) : (
+                  <span className="epub-reader__toc-label">{label}</span>
+                )}
+              </summary>
               <TocTree items={item.subitems ?? []} onSelect={onSelect} activeHref={activeHref} />
             </details>
           </li>

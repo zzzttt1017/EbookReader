@@ -104,7 +104,6 @@ temp/
 
 # Editor directories and files
 .vscode/*
-.trae/*
 !.vscode/extensions.json
 .idea
 *.suo

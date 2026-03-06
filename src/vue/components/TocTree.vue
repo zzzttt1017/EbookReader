@@ -81,7 +81,11 @@ watch(
       </template>
       <template v-else>
         <details :class="['epub-reader__toc-details', { 'is-active': containsActive(item) }]" :open="containsActive(item) ? true : undefined">
-          <summary :class="['epub-reader__toc-summary', { 'is-active': containsActive(item) }]">{{ item.label || item.href || '未命名' }}</summary>
+          <summary :class="['epub-reader__toc-summary', { 'is-active': containsActive(item) }]">
+            <!-- 如果有 href，允许点击跳转，并阻止冒泡以避免切换展开状态 -->
+            <span v-if="item.href" class="epub-reader__toc-label" @click.stop="emit('select', item.href)">{{ item.label || item.href || '未命名' }}</span>
+            <span v-else class="epub-reader__toc-label">{{ item.label || item.href || '未命名' }}</span>
+          </summary>
           <TocTree :items="item.subitems" :active-href="activeHref" @select="emit('select', $event)" />
         </details>
       </template>
